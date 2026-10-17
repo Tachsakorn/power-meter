@@ -290,8 +290,11 @@ class AmdGpuSensor:
     overlay, reads the card's power sensor without admin rights.
     """
 
-    POWER_SENSOR = 23  # ADLSensorType.PMLOG_ASIC_POWER, in watts
-    AMD_VENDOR = 0x1002
+    # ADLSensorType numbers, in watts. RDNA3 cards report total board power
+    # (52); older cards report ASIC power (23). Board power is the better one.
+    POWER_SENSORS = (52, 23)
+    # ADL reports AMD's PCI vendor id 0x1002 as the decimal number 1002.
+    AMD_VENDORS = (1002, 0x1002)
 
     def __init__(self) -> None:
         self.error: str | None = None
@@ -301,21 +304,25 @@ class AmdGpuSensor:
             return
         try:
             self._open()
-            if self.read_sensors().get(self.POWER_SENSOR) is None:
-                raise OSError("driver doesn't report GPU power")
+            sensors = self.read_sensors()
         except Exception as exc:
             self._adl = None
             self.error = describe(exc)
+            return
+        self._sensor = next((i for i in self.POWER_SENSORS if 0 < sensors.get(i, 0) < 700), None)
+        if self._sensor is None:
+            # Keep the connection so `power-meter check` can list what *is* there.
+            self.error = f"driver doesn't report GPU power (sensors: {sensors})"
 
     @property
     def available(self) -> bool:
-        return self._adl is not None
+        return self._adl is not None and self.error is None
 
     def read_watts(self) -> float:
-        if self._adl is None:
+        if not self.available:
             return 0.0
         try:
-            return float(self.read_sensors().get(self.POWER_SENSOR, 0))
+            return float(self.read_sensors().get(self._sensor, 0))
         except Exception:
             return 0.0
 
@@ -351,9 +358,10 @@ class AmdGpuSensor:
             info.iSize = ctypes.sizeof(_AdlAdapterInfo)
         _check_adl(adl.ADL2_Adapter_AdapterInfo_Get(self._ctx, infos, ctypes.sizeof(infos)))
         # One physical card shows up once per display output; any of them will do.
-        index = next((i.iAdapterIndex for i in infos if i.iVendorID == self.AMD_VENDOR), None)
+        index = next((i.iAdapterIndex for i in infos if i.iVendorID in self.AMD_VENDORS), None)
         if index is None:
-            raise OSError("no AMD adapter")
+            vendors = sorted({i.iVendorID for i in infos})
+            raise OSError(f"no AMD adapter among {count.value} (vendor ids {vendors})")
         self._index = index
         self._adl = adl
 
