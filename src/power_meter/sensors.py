@@ -290,9 +290,9 @@ class AmdGpuSensor:
     overlay, reads the card's power sensor without admin rights.
     """
 
-    # ADLSensorType numbers, in watts. RDNA3 cards report total board power
-    # (52); older cards report ASIC power (23). Board power is the better one.
-    POWER_SENSORS = (52, 23)
+    # ADLSensorType numbers, in watts: PMLOG_BOARD_POWER (73) on recent
+    # cards, PMLOG_ASIC_POWER (23) on older ones. Board power is the better one.
+    POWER_SENSORS = (73, 23)
     # ADL reports AMD's PCI vendor id 0x1002 as the decimal number 1002.
     AMD_VENDORS = (1002, 0x1002)
 
