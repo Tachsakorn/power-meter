@@ -1,12 +1,20 @@
-"""Load settings from config.toml, falling back to built-in defaults."""
+"""Settings, worked out automatically wherever possible.
+
+Nothing has to be configured: rates come from rates.py, hardware from
+hardware.py, and the meter type is picked once inside the app. config.toml
+is still read if present, for people who want to override something.
+"""
 
 from __future__ import annotations
 
 import os
 import tomllib
 from dataclasses import dataclass, field
+from datetime import date
 from pathlib import Path
 
+from . import rates as rates_mod
+from . import settings as settings_mod
 from .estimate import EstimateConfig
 from .tariff import FlatTariff, Tariff, TouTariff, thai_holidays
 
@@ -19,6 +27,21 @@ class Config:
     save_every_sec: float = 30.0
     lhm_url: str = "http://localhost:8085/data.json"
     data_file: Path = field(default_factory=lambda: default_data_dir() / "usage.json")
+    rates: dict = field(default_factory=lambda: rates_mod.BUILT_IN)
+    meter_chosen: bool = True  # False until the user has said which meter they have
+    tariff_overrides: dict = field(default_factory=dict)  # [tariff] from config.toml
+
+    @property
+    def meter(self) -> str:
+        return "tou" if isinstance(self.tariff, TouTariff) else "flat"
+
+    @property
+    def settings_file(self) -> Path:
+        return self.data_file.with_name("settings.json")
+
+    @property
+    def rates_file(self) -> Path:
+        return self.data_file.with_name("rates.json")
 
 
 def default_data_dir() -> Path:
@@ -33,36 +56,42 @@ def load(path: Path | None) -> Config:
             raw = tomllib.load(f)
 
     app = raw.get("app", {})
-    est = raw.get("estimate", {})
-    kwargs = {}
-    if "data_file" in app:
-        kwargs["data_file"] = Path(app["data_file"]).expanduser()
+    t = raw.get("tariff", {})
+    data_file = (
+        Path(app["data_file"]).expanduser()
+        if "data_file" in app
+        else default_data_dir() / "usage.json"
+    )
+    rates = rates_mod.load(data_file.with_name("rates.json"))
+    chosen = settings_mod.load(data_file.with_name("settings.json")).get("meter")
+    kind = t.get("type") or chosen or "flat"
+    if kind not in settings_mod.METER_TYPES:
+        raise ValueError(f'tariff.type must be "tou" or "flat", got {kind!r}')
 
     return Config(
-        tariff=_load_tariff(raw.get("tariff", {})),
-        estimate=EstimateConfig(**est),
+        tariff=build_tariff(kind, rates, date.today(), overrides=t),
+        estimate=EstimateConfig(**raw.get("estimate", {})),
         interval_sec=app.get("interval_sec", 2.0),
         save_every_sec=app.get("save_every_sec", 30.0),
         lhm_url=app.get("lhm_url", "http://localhost:8085/data.json"),
-        **kwargs,
+        data_file=data_file,
+        rates=rates,
+        meter_chosen=bool(t.get("type") or chosen),
+        tariff_overrides=t,
     )
 
 
-def _load_tariff(t: dict) -> Tariff:
-    # Defaults: MEA/PEA residential, Sep-Dec 2026 Ft.
-    ft = t.get("ft", 0.1623)
-    vat = t.get("vat", 0.07)
-    kind = t.get("type", "tou")
-
+def build_tariff(kind: str, rates: dict, day: date, overrides: dict | None = None) -> Tariff:
+    o = overrides or {}
+    ft = o.get("ft", rates_mod.ft_on(rates, day))
+    vat = o.get("vat", rates["vat"])
     if kind == "flat":
-        return FlatTariff(rate=t.get("flat_rate", 3.78), ft=ft, vat=vat)
-    if kind != "tou":
-        raise ValueError(f'tariff.type must be "tou" or "flat", got {kind!r}')
-
-    start, end = t.get("peak_hours", [9, 22])
+        return FlatTariff(rate=o.get("flat_rate", rates["flat_rate"]), ft=ft, vat=vat)
+    tou = rates["tou"]
+    start, end = o.get("peak_hours", tou["peak_hours"])
     return TouTariff(
-        peak_rate=t.get("peak_rate", 5.7982),
-        off_peak_rate=t.get("off_peak_rate", 2.6369),
+        peak_rate=o.get("peak_rate", tou["peak"]),
+        off_peak_rate=o.get("off_peak_rate", tou["off_peak"]),
         ft=ft,
         vat=vat,
         peak_start_hour=start,

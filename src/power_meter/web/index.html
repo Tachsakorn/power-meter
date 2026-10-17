@@ -26,6 +26,10 @@
       <div class="info-panel">
         <p id="sourceNote"></p>
         <ul class="sensors" id="sensors"></ul>
+        <p class="meter-line">
+          <span id="meterInfo"></span>
+          <button type="button" class="link-button" id="changeMeter">เปลี่ยนประเภทมิเตอร์</button>
+        </p>
         <p class="info-tip" id="cpuTip" hidden>
           ไม่บังคับ: ถ้าเปิด LibreHardwareMonitor แบบ Run as administrator แล้วกด
           Options → Remote Web Server → Run แอปจะได้ไฟ CPU จริงแทนค่าประมาณ
@@ -34,6 +38,22 @@
     </details>
     </div>
   </header>
+
+  <section class="setup" id="meterSetup" aria-labelledby="setupTitle" hidden>
+    <div>
+      <h2 id="setupTitle">บ้านคุณใช้มิเตอร์ไฟแบบไหน</h2>
+      <p>
+        เป็นอย่างเดียวที่แอปตรวจเองไม่ได้ ดูได้จากบิลค่าไฟ ถ้าบิลแยกหน่วยเป็น On Peak กับ Off Peak
+        คือมิเตอร์ TOU
+      </p>
+    </div>
+    <div class="setup-actions">
+      <button type="button" class="setup-choice" data-meter="flat">มิเตอร์ปกติ</button>
+      <button type="button" class="setup-choice" data-meter="tou">
+        มิเตอร์ TOU <small>กลางวันแพง กลางคืนถูก</small>
+      </button>
+    </div>
+  </section>
 
   <section class="hero" aria-label="ตอนนี้">
     <figure class="dial">

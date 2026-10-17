@@ -283,6 +283,114 @@ class NvidiaSensor:
             return 0.0
 
 
+class AmdGpuSensor:
+    """Power draw of an AMD card from the Radeon driver's ADL library.
+
+    atiadlxx.dll ships with every Radeon driver and, like the Adrenalin
+    overlay, reads the card's power sensor without admin rights.
+    """
+
+    POWER_SENSOR = 23  # ADLSensorType.PMLOG_ASIC_POWER, in watts
+    AMD_VENDOR = 0x1002
+
+    def __init__(self) -> None:
+        self.error: str | None = None
+        self._adl = None
+        if sys.platform != "win32":
+            self.error = "Windows only"
+            return
+        try:
+            self._open()
+            if self.read_sensors().get(self.POWER_SENSOR) is None:
+                raise OSError("driver doesn't report GPU power")
+        except Exception as exc:
+            self._adl = None
+            self.error = describe(exc)
+
+    @property
+    def available(self) -> bool:
+        return self._adl is not None
+
+    def read_watts(self) -> float:
+        if self._adl is None:
+            return 0.0
+        try:
+            return float(self.read_sensors().get(self.POWER_SENSOR, 0))
+        except Exception:
+            return 0.0
+
+    def read_sensors(self) -> dict[int, int]:
+        """Every sensor the driver supports, by ADLSensorType number."""
+        out = _AdlPmLogOutput()
+        out.size = ctypes.sizeof(out)
+        _check_adl(self._adl.ADL2_New_QueryPMLogData_Get(self._ctx, self._index, ctypes.byref(out)))
+        return {i: s.value for i, s in enumerate(out.sensors) if s.supported}
+
+    def _open(self) -> None:
+        adl = ctypes.WinDLL("atiadlxx")
+        msvcrt = ctypes.CDLL("msvcrt")
+        msvcrt.malloc.restype = ctypes.c_void_p
+        msvcrt.malloc.argtypes = [ctypes.c_size_t]
+        alloc_type = ctypes.WINFUNCTYPE(ctypes.c_void_p, ctypes.c_int)
+        # Keep a reference: ADL calls back into this for as long as it lives.
+        self._alloc = alloc_type(lambda size: msvcrt.malloc(size))
+
+        adl.ADL2_Main_Control_Create.argtypes = [alloc_type, ctypes.c_int, ctypes.c_void_p]
+        adl.ADL2_Adapter_NumberOfAdapters_Get.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+        adl.ADL2_Adapter_AdapterInfo_Get.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_int]
+        adl.ADL2_New_QueryPMLogData_Get.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_void_p]
+
+        self._ctx = ctypes.c_void_p()
+        _check_adl(adl.ADL2_Main_Control_Create(self._alloc, 1, ctypes.byref(self._ctx)))
+        count = ctypes.c_int()
+        _check_adl(adl.ADL2_Adapter_NumberOfAdapters_Get(self._ctx, ctypes.byref(count)))
+        if count.value <= 0:
+            raise OSError("no AMD adapter")
+        infos = (_AdlAdapterInfo * count.value)()
+        for info in infos:
+            info.iSize = ctypes.sizeof(_AdlAdapterInfo)
+        _check_adl(adl.ADL2_Adapter_AdapterInfo_Get(self._ctx, infos, ctypes.sizeof(infos)))
+        # One physical card shows up once per display output; any of them will do.
+        index = next((i.iAdapterIndex for i in infos if i.iVendorID == self.AMD_VENDOR), None)
+        if index is None:
+            raise OSError("no AMD adapter")
+        self._index = index
+        self._adl = adl
+
+
+class _AdlAdapterInfo(ctypes.Structure):
+    _fields_ = [
+        ("iSize", ctypes.c_int),
+        ("iAdapterIndex", ctypes.c_int),
+        ("strUDID", ctypes.c_char * 256),
+        ("iBusNumber", ctypes.c_int),
+        ("iDeviceNumber", ctypes.c_int),
+        ("iFunctionNumber", ctypes.c_int),
+        ("iVendorID", ctypes.c_int),
+        ("strAdapterName", ctypes.c_char * 256),
+        ("strDisplayName", ctypes.c_char * 256),
+        ("iPresent", ctypes.c_int),
+        ("iExist", ctypes.c_int),
+        ("strDriverPath", ctypes.c_char * 256),
+        ("strDriverPathExt", ctypes.c_char * 256),
+        ("strPNPString", ctypes.c_char * 256),
+        ("iOSDisplayIndex", ctypes.c_int),
+    ]
+
+
+class _AdlSensor(ctypes.Structure):
+    _fields_ = [("supported", ctypes.c_int), ("value", ctypes.c_int)]
+
+
+class _AdlPmLogOutput(ctypes.Structure):
+    _fields_ = [("size", ctypes.c_int), ("sensors", _AdlSensor * 256)]
+
+
+def _check_adl(status: int) -> None:
+    if status < 0:  # ADL uses positive codes for "OK with a warning"
+        raise OSError(f"ADL error {status}")
+
+
 def _preload_nvml(pynvml) -> None:
     """Load nvml.dll ourselves when it isn't where pynvml looks.
 

@@ -7,7 +7,7 @@ import threading
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from . import game_store
+from . import game_store, rates
 from .config import Config
 from .monitor import Monitor
 from .storage import Usage
@@ -31,6 +31,10 @@ class Api:
 
     def get_state(self) -> dict:
         return build_state(self._monitor, datetime.now())
+
+    def set_meter(self, kind: str) -> None:
+        """The one thing the app can't detect: which kind of meter the home has."""
+        self._monitor.set_meter(kind)
 
     def set_compact(self, compact: bool) -> None:
         """Shrink to a small always-on-top widget, or back to the full window."""
@@ -111,6 +115,11 @@ def build_state(monitor: Monitor, now: datetime) -> dict:
         noon = now.replace(hour=12, minute=0, second=0, microsecond=0)
         state["off_peak_all_day"] = tariff.period(noon) == OFF_PEAK
         state["holiday"] = now.date() in tariff.holidays
+    cfg = monitor.cfg
+    state["meter"] = cfg.meter
+    state["meter_chosen"] = cfg.meter_chosen
+    state["ft"] = tariff.ft
+    state["rates_updated"] = cfg.rates["updated"]
     state["hardware"] = {
         "laptop": monitor.hw.laptop,
         "cpu": monitor.hw.cpu,
@@ -118,6 +127,8 @@ def build_state(monitor: Monitor, now: datetime) -> dict:
         "gpu": monitor.gpu_name,
         "gpu_board": monitor.gpu_board,
         "base_watts": monitor.base_watts,
+        "ram_modules": monitor.hw.ram_modules,
+        "drives": list(monitor.hw.drives),
     }
     state["sensors"] = {
         "battery": {
@@ -155,7 +166,12 @@ def run(cfg: Config) -> None:
     api.attach(window)
     window.events.closed += stop.set
 
+    def update_rates() -> None:
+        if rates.refresh(cfg.rates_file):
+            monitor.reload_rates()
+
     worker.start()
+    threading.Thread(target=update_rates, daemon=True).start()
     # Serve the web folder over localhost; file:// pages can't always load fonts.
     webview.start(http_server=True)
     stop.set()

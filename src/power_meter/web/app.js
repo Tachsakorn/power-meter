@@ -180,8 +180,10 @@ function drawPeriod(state) {
   const box = $("period");
   box.replaceChildren();
   const icon = svg("svg", { viewBox: "-10 -10 20 20", "aria-hidden": "true" });
-  icon.append(state.period === "peak" ? sun(0, 0, 16) : moon(0, 0, 16));
-  box.append(icon);
+  if (state.is_tou) {
+    icon.append(state.period === "peak" ? sun(0, 0, 16) : moon(0, 0, 16));
+    box.append(icon);
+  }
 
   let text = "อัตราปกติ";
   if (state.is_tou && state.period === "peak") {
@@ -439,6 +441,7 @@ const SOURCE_TEXT = {
   measured: "วัดจริง",
   load: "ประมาณจาก % ใช้งาน",
   fixed: "ค่าคงที่",
+  parts: "ประมาณจากชิ้นส่วน",
   none: "ไม่พบ",
 };
 
@@ -477,8 +480,10 @@ function drawSources(state) {
     },
     {
       name: "เมนบอร์ด, RAM, พัดลม, ไดรฟ์",
-      source: "fixed",
-      detail: `ประมาณ ${Math.round(hw.base_watts)} W`,
+      source: "parts",
+      detail:
+        `ราว ${Math.round(hw.base_watts)} W จากชิ้นส่วนที่ตรวจเจอ` +
+        (hw.ram_modules ? ` (RAM ${hw.ram_modules} แถว, ไดรฟ์ ${hw.drives.length} ตัว)` : ""),
     },
   ];
   if (hw.laptop) {
@@ -494,7 +499,36 @@ function drawSources(state) {
     }),
   );
   $("cpuTip").hidden = cpu.source === "measured";
+
+  const meter = state.meter === "tou" ? "มิเตอร์ TOU" : "มิเตอร์ปกติ";
+  $("meterInfo").textContent =
+    `${meter}, Ft ${state.ft.toFixed(4)} บาท/หน่วย ` +
+    `(อัตราค่าไฟอัปเดตเอง ข้อมูลวันที่ ${state.rates_updated})`;
 }
+
+/* Meter type: asked once, changeable from the sources panel */
+
+let askingMeter = false;
+
+function drawSetup(state) {
+  $("meterSetup").hidden = state.meter_chosen && !askingMeter;
+}
+
+for (const btn of document.querySelectorAll("[data-meter]")) {
+  btn.addEventListener("click", async () => {
+    askingMeter = false;
+    $("meterSetup").hidden = true;
+    await window.pywebview.api.set_meter(btn.dataset.meter);
+    render(await window.pywebview.api.get_state());
+  });
+}
+
+$("changeMeter").addEventListener("click", () => {
+  askingMeter = true;
+  $("meterSetup").hidden = false;
+  document.querySelector(".info").open = false;
+  $("meterSetup").querySelector("button").focus();
+});
 
 let latest = null;
 
@@ -508,6 +542,7 @@ function render(state) {
   drawPowerChart(state.history);
   drawDays(state.days, state.is_tou);
   drawSources(state);
+  drawSetup(state);
 }
 
 async function poll() {

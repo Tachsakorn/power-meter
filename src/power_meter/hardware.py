@@ -8,6 +8,7 @@ in config.toml.
 
 from __future__ import annotations
 
+import contextlib
 import platform
 import re
 import sys
@@ -24,6 +25,8 @@ class Hardware:
     cpu: str
     gpus: tuple[str, ...]
     laptop: bool
+    ram_modules: int = 0
+    drives: tuple[str, ...] = ()  # "nvme", "ssd", "hdd" or "unknown"
 
 
 def detect() -> Hardware:
@@ -32,21 +35,54 @@ def detect() -> Hardware:
 
     cpu = platform.processor() or "unknown CPU"
     gpus: tuple[str, ...] = ()
+    ram_modules = 0
+    drives: tuple[str, ...] = ()
+    # Each query is optional: a broken WMI class shouldn't hide the others.
     try:
         import pythoncom
         import wmi
 
         pythoncom.CoInitialize()
         conn = wmi.WMI()
+    except Exception:
+        return Hardware(cpu=cpu, gpus=gpus, laptop=_has_battery())
+    with contextlib.suppress(Exception):
         cpu = conn.Win32_Processor()[0].Name.strip()
+    with contextlib.suppress(Exception):
         gpus = tuple(
             name.strip()
             for name in (v.Name or "" for v in conn.Win32_VideoController())
             if name and not any(word in name.lower() for word in _IGNORED_ADAPTERS)
         )
-    except Exception:  # WMI can be broken or slow on some installs; names are a nicety
-        pass
-    return Hardware(cpu=cpu, gpus=gpus, laptop=_has_battery())
+    with contextlib.suppress(Exception):
+        ram_modules = len(conn.Win32_PhysicalMemory())
+    with contextlib.suppress(Exception):
+        storage = wmi.WMI(namespace="root\\Microsoft\\Windows\\Storage")
+        drives = tuple(_drive_kind(d.BusType, d.MediaType) for d in storage.MSFT_PhysicalDisk())
+    return Hardware(
+        cpu=cpu, gpus=gpus, laptop=_has_battery(), ram_modules=ram_modules, drives=drives
+    )
+
+
+def _drive_kind(bus_type: int, media_type: int) -> str:
+    # MSFT_PhysicalDisk: BusType 17 = NVMe; MediaType 3 = HDD, 4 = SSD.
+    if bus_type == 17:
+        return "nvme"
+    return {3: "hdd", 4: "ssd"}.get(media_type, "unknown")
+
+
+_DRIVE_WATTS = {"nvme": 4.0, "ssd": 3.0, "hdd": 7.0, "unknown": 4.0}
+
+
+def base_watts(hw: Hardware) -> float:
+    """Everything other than CPU and GPU, built up from the parts we can see."""
+    if hw.laptop:
+        # Built-in screen, board, RAM and storage are all low-power parts.
+        return 9.0 + 1.5 * hw.ram_modules + 2.0 * len(hw.drives)
+    ram = hw.ram_modules or 2
+    drives = hw.drives or ("unknown",)
+    # Motherboard, chipset, USB, case fans and the AIO pump if there is one.
+    return 22.0 + 3.0 * ram + sum(_DRIVE_WATTS[d] for d in drives)
 
 
 def _has_battery() -> bool:
@@ -110,9 +146,38 @@ def guess_cpu_tdp(name: str) -> float:
     return DEFAULT_CPU_TDP
 
 
+# Rated board power of common cards. Longer names first so "4070 ti super"
+# wins over "4070 ti" and "4070".
+_GPU_WATTS = {
+    "rtx 5090": 575, "rtx 5080": 360, "rtx 5070 ti": 300, "rtx 5070": 250,
+    "rtx 5060 ti": 180, "rtx 5060": 145, "rtx 4090": 450, "rtx 4080 super": 320,
+    "rtx 4080": 320, "rtx 4070 ti super": 285, "rtx 4070 ti": 285, "rtx 4070 super": 220,
+    "rtx 4070": 200, "rtx 4060 ti": 160, "rtx 4060": 115, "rtx 3090 ti": 450,
+    "rtx 3090": 350, "rtx 3080 ti": 350, "rtx 3080": 320, "rtx 3070 ti": 290,
+    "rtx 3070": 220, "rtx 3060 ti": 200, "rtx 3060": 170, "rtx 3050": 130,
+    "rtx 2080 ti": 250, "rtx 2080": 215, "rtx 2070": 175, "rtx 2060": 160,
+    "gtx 1660 super": 125, "gtx 1660 ti": 120, "gtx 1660": 120, "gtx 1650": 75,
+    "gtx 1080 ti": 250, "gtx 1080": 180, "gtx 1070": 150, "gtx 1060": 120,
+    "rx 9070 xt": 304, "rx 9070": 220, "rx 9060 xt": 160, "rx 7900 xtx": 355,
+    "rx 7900 xt": 315, "rx 7900 gre": 260, "rx 7800 xt": 263, "rx 7700 xt": 245,
+    "rx 7600 xt": 190, "rx 7600": 165, "rx 6950 xt": 335, "rx 6900 xt": 300,
+    "rx 6800 xt": 300, "rx 6800": 250, "rx 6750 xt": 250, "rx 6700 xt": 230,
+    "rx 6700": 175, "rx 6650 xt": 180, "rx 6600 xt": 160, "rx 6600": 132,
+    "rx 6500 xt": 107, "rx 6400": 53, "rx 5700 xt": 225, "rx 5700": 180,
+    "rx 5600 xt": 150, "rx 5500 xt": 130, "rx 580": 185, "rx 570": 150,
+    "arc b580": 190, "arc b570": 150, "arc a770": 225, "arc a750": 225,
+    "arc a580": 185, "arc a380": 75,
+}  # fmt: skip
+
+
 def guess_gpu_watts(name: str) -> float:
     """Typical board power of a discrete card; 0 for graphics built into the CPU."""
     n = _clean(name)
+    # Laptop chips run at a fraction of the desktop card with the same name.
+    scale = 0.5 if "laptop" in n or "mobile" in n else 1.0
+    for model, watts in sorted(_GPU_WATTS.items(), key=lambda kv: -len(kv[0])):
+        if re.search(rf"{model}\b", n):
+            return watts * scale
 
     if m := re.search(r"rtx (\d)0(\d)0", n):
         tier = int(m.group(2))
@@ -134,6 +199,11 @@ def guess_gpu_watts(name: str) -> float:
         return 0.0
 
     return DEFAULT_DISCRETE_GPU
+
+
+def is_amd_gpu(name: str) -> bool:
+    n = name.lower()
+    return "radeon" in n or "amd" in n
 
 
 def is_nvidia(name: str) -> bool:

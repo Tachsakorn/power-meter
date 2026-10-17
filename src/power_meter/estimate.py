@@ -6,9 +6,6 @@ from dataclasses import dataclass
 
 from .sensors import BatteryReading
 
-LAPTOP_BASE_WATTS = 15.0  # display, RAM, SSD, fans
-DESKTOP_BASE_WATTS = 40.0  # motherboard, RAM, drives, case fans, pump
-
 
 @dataclass(frozen=True)
 class EstimateConfig:

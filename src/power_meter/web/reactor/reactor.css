@@ -90,12 +90,14 @@
   opacity: 0.8;
 }
 
+body[data-view="reactor"] .setup,
 body[data-view="reactor"] .hero,
 body[data-view="reactor"] .totals,
 body[data-view="reactor"] .panel {
   display: none;
 }
 
+body.compact .setup,
 body.compact .views,
 body.compact .rx {
   display: none;

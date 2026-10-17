@@ -307,6 +307,87 @@ body.compact .rate-meta {
   font-size: 13px;
 }
 
+/* First-run question: the one thing that can't be detected */
+
+.setup {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px 24px;
+  padding: 18px 20px;
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  border: 2px solid var(--accent);
+}
+
+.setup[hidden],
+.advice[hidden] {
+  display: none;
+}
+
+.setup h2 {
+  font-size: 18px;
+  color: var(--ink);
+  margin-bottom: 4px;
+}
+
+.setup p {
+  max-width: 52ch;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.setup-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.setup-choice {
+  font: inherit;
+  font-weight: 600;
+  padding: 10px 16px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+}
+
+.setup-choice small {
+  display: block;
+  font-weight: 400;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.setup-choice:hover {
+  border-color: var(--accent);
+}
+
+.meter-line {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+
+.link-button {
+  font: inherit;
+  font-size: 13px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
 /* Hero: the dial and the live rate */
 
 .hero {

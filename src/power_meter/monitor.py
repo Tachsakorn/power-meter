@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import threading
 import time
 from collections import deque
@@ -10,15 +11,22 @@ from dataclasses import dataclass
 from datetime import date, datetime
 
 from . import hardware
-from .config import Config
+from . import rates as rates_mod
+from . import settings as settings_mod
+from .config import Config, build_tariff
 from .estimate import (
-    DESKTOP_BASE_WATTS,
-    LAPTOP_BASE_WATTS,
     cpu_watts_from_load,
     gpu_watts_from_load,
     wall_watts,
 )
-from .sensors import BatterySensor, CpuLoadSensor, GpuLoadSensor, LhmCpuSensor, NvidiaSensor
+from .sensors import (
+    AmdGpuSensor,
+    BatterySensor,
+    CpuLoadSensor,
+    GpuLoadSensor,
+    LhmCpuSensor,
+    NvidiaSensor,
+)
 from .storage import Usage, UsageLog
 
 HISTORY_SEC = 600
@@ -44,9 +52,7 @@ class Monitor:
         est = cfg.estimate
 
         self.battery = BatterySensor() if self.hw.laptop else None
-        self.base_watts = est.base_watts or (
-            LAPTOP_BASE_WATTS if self.hw.laptop else DESKTOP_BASE_WATTS
-        )
+        self.base_watts = est.base_watts or hardware.base_watts(self.hw)
 
         self.cpu = LhmCpuSensor(cfg.lhm_url)
         self.cpu_load = CpuLoadSensor()
@@ -55,7 +61,7 @@ class Monitor:
         # Real GPU power where NVML can give it; otherwise scale the card's
         # typical board power by how busy Windows says it is.
         self.gpu_name = next((g for g in self.hw.gpus if hardware.guess_gpu_watts(g)), None)
-        self.gpu = NvidiaSensor() if self.gpu_name and hardware.is_nvidia(self.gpu_name) else None
+        self.gpu = _gpu_power_sensor(self.gpu_name)
         self.gpu_board = est.gpu_board_watts or (
             hardware.guess_gpu_watts(self.gpu_name) if self.gpu_name else 0.0
         )
@@ -75,6 +81,33 @@ class Monitor:
         # The desktop app reads state from the UI thread while we write it here.
         self.lock = threading.Lock()
         self._last = time.monotonic()
+        self._tariff_day = date.today()
+
+    # Tariff upkeep: the meter type is picked in the app, Ft follows the date
+    # and the rates file can be updated over the network while we run.
+
+    def set_meter(self, kind: str) -> None:
+        if kind not in settings_mod.METER_TYPES:
+            raise ValueError(f"unknown meter type {kind!r}")
+        stored = settings_mod.load(self.cfg.settings_file)
+        settings_mod.save(self.cfg.settings_file, {**stored, "meter": kind})
+        self._rebuild_tariff(kind=kind, chosen=True)
+
+    def reload_rates(self) -> None:
+        self._rebuild_tariff(rates=rates_mod.load(self.cfg.rates_file))
+
+    def _rebuild_tariff(self, kind=None, rates=None, chosen=None, day=None) -> None:
+        cfg = self.cfg
+        rates = rates or cfg.rates
+        tariff = build_tariff(
+            kind or cfg.meter, rates, day or date.today(), overrides=cfg.tariff_overrides
+        )
+        self.cfg = dataclasses.replace(
+            cfg,
+            tariff=tariff,
+            rates=rates,
+            meter_chosen=cfg.meter_chosen if chosen is None else chosen,
+        )
 
     def step(self) -> Sample:
         now_mono = time.monotonic()
@@ -89,8 +122,12 @@ class Monitor:
             self.cfg.estimate.adapter_efficiency,
         )
         now = datetime.now()
-        period = self.cfg.tariff.period(now)
-        sample = Sample(now, watts, measured, period, self.cfg.tariff.price_per_kwh(period))
+        if now.date() != self._tariff_day:
+            self._tariff_day = now.date()
+            self._rebuild_tariff(day=now.date())  # a new Ft period may have started
+        tariff = self.cfg.tariff
+        period = tariff.period(now)
+        sample = Sample(now, watts, measured, period, tariff.price_per_kwh(period))
 
         wh = watts * hours
         baht = wh / 1000 * sample.price
@@ -153,3 +190,14 @@ class Monitor:
                 for u in periods.values():
                     total.add(u.wh, u.baht)
         return total, days
+
+
+def _gpu_power_sensor(name: str | None) -> NvidiaSensor | AmdGpuSensor | None:
+    """A sensor that reports the card's real power draw, if its vendor offers one."""
+    if not name:
+        return None
+    if hardware.is_nvidia(name):
+        return NvidiaSensor()
+    if hardware.is_amd_gpu(name):
+        return AmdGpuSensor()
+    return None

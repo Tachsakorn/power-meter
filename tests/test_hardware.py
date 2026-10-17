@@ -1,6 +1,6 @@
 import pytest
 
-from power_meter.hardware import guess_cpu_tdp, guess_gpu_watts, is_nvidia
+from power_meter.hardware import Hardware, base_watts, guess_cpu_tdp, guess_gpu_watts, is_nvidia
 
 
 @pytest.mark.parametrize(
@@ -28,16 +28,20 @@ def test_cpu_tdp_guess(name, tdp):
 @pytest.mark.parametrize(
     ("name", "watts"),
     [
-        ("NVIDIA GeForce RTX 4070", 220),
-        ("NVIDIA GeForce RTX 4090", 420),
-        ("NVIDIA GeForce RTX 3060", 140),
-        ("NVIDIA GeForce RTX 5070 Laptop GPU", 220),
-        ("AMD Radeon RX 7800 XT", 250),
-        ("AMD Radeon RX 6600", 140),
+        ("NVIDIA GeForce RTX 4070", 200),
+        ("NVIDIA GeForce RTX 4070 Ti SUPER", 285),
+        ("NVIDIA GeForce RTX 4090", 450),
+        ("NVIDIA GeForce RTX 3060", 170),
+        ("NVIDIA GeForce RTX 5070 Laptop GPU", 125),
+        ("AMD Radeon RX 7600", 165),
+        ("AMD Radeon RX 7600 XT", 190),
+        ("AMD Radeon RX 7800 XT", 263),
+        ("AMD Radeon RX 6600", 132),
+        ("NVIDIA GeForce RTX 6070", 220),
         ("AMD Radeon(TM) Graphics", 0),
         ("AMD Radeon 780M Graphics", 0),
         ("Intel(R) UHD Graphics 770", 0),
-        ("Intel(R) Arc(TM) A770 Graphics", 200),
+        ("Intel(R) Arc(TM) A770 Graphics", 225),
     ],
 )
 def test_gpu_watts_guess(name, watts):
@@ -47,3 +51,12 @@ def test_gpu_watts_guess(name, watts):
 def test_is_nvidia():
     assert is_nvidia("NVIDIA GeForce RTX 4070")
     assert not is_nvidia("AMD Radeon RX 7800 XT")
+
+
+def test_base_watts_from_parts():
+    desktop = Hardware(cpu="x", gpus=(), laptop=False, ram_modules=2, drives=("nvme", "hdd"))
+    assert base_watts(desktop) == 22 + 3 * 2 + 4 + 7
+    unknown = Hardware(cpu="x", gpus=(), laptop=False)
+    assert base_watts(unknown) == 22 + 3 * 2 + 4
+    laptop = Hardware(cpu="x", gpus=(), laptop=True, ram_modules=2, drives=("nvme",))
+    assert base_watts(laptop) == 9 + 3 + 2

@@ -50,12 +50,16 @@ def check(cfg: Config, samples: int = 5) -> None:
         cfg = dataclasses.replace(cfg, data_file=Path(tmp) / "usage.json")
         monitor = Monitor(cfg)
         hw = monitor.hw
+        drives = ", ".join(hw.drives) or "ไม่ทราบ"
         print(f"เครื่อง:      {'โน้ตบุ๊ก' if hw.laptop else 'คอมตั้งโต๊ะ'}")
         print(f"CPU:         {hw.cpu} (ใช้ {monitor.cpu_tdp:.0f} W เป็นค่าเต็มกำลัง)")
         print(f"การ์ดจอที่เจอ: {', '.join(hw.gpus) or 'ไม่พบ'}")
         print(f"การ์ดจอที่คิด: {monitor.gpu_name or 'ไม่มี (ใช้กราฟิกในตัว CPU)'}")
         if monitor.gpu is not None:
-            print(f"  NVML:      {'ใช้ได้' if monitor.gpu.available else monitor.gpu.error}")
+            name = type(monitor.gpu).__name__
+            print(f"  {name}: {'วัดจริงได้' if monitor.gpu.available else monitor.gpu.error}")
+            if hasattr(monitor.gpu, "read_sensors") and monitor.gpu.available:
+                print(f"  ADL sensors: {monitor.gpu.read_sensors()}")
         if monitor.gpu_load is not None:
             print(
                 f"  GPU load:  {'ใช้ได้' if monitor.gpu_load.available else monitor.gpu_load.error}"
@@ -65,7 +69,10 @@ def check(cfg: Config, samples: int = 5) -> None:
         print(
             f"CPU load:    {'ใช้ได้' if monitor.cpu_load.error is None else monitor.cpu_load.error}"
         )
+        print(f"RAM:         {hw.ram_modules} แถว | ไดรฟ์: {drives}")
         print(f"ส่วนอื่น:      {monitor.base_watts:.0f} W")
+        meter = cfg.meter if cfg.meter_chosen else f"{cfg.meter} (ยังไม่ได้เลือกในแอป)"
+        print(f"มิเตอร์:      {meter} | Ft {cfg.tariff.ft} | อัตราอัปเดต {cfg.rates['updated']}")
         print()
 
         for _ in range(samples):
