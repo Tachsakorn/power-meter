@@ -43,7 +43,10 @@ class BatterySensor:
         try:
             self._path = _battery_device_path()
             self._query()
-        except OSError as exc:
+        # Probing talks to drivers through ctypes, which can fail in ways that
+        # aren't OSError (e.g. ctypes.ArgumentError). A failed probe must only
+        # mark the sensor unavailable, never stop the app from starting.
+        except Exception as exc:
             self.error = describe(exc)
 
     @property
@@ -55,7 +58,7 @@ class BatterySensor:
             return None
         try:
             state, rate_mw = self._query()
-        except OSError:  # the handle can go stale after sleep/resume
+        except Exception:  # the handle can go stale after sleep/resume
             return None
         if rate_mw == _UNKNOWN_RATE:
             rate_mw = 0
@@ -261,7 +264,7 @@ class NvidiaSensor:
             pynvml.nvmlInit()
             count = pynvml.nvmlDeviceGetCount()
             self._handles = [pynvml.nvmlDeviceGetHandleByIndex(i) for i in range(count)]
-        except pynvml.NVMLError as exc:  # no driver, or no NVIDIA GPU at all
+        except Exception as exc:  # no driver, no NVIDIA GPU, or the DLL search failed
             self.error = describe(exc)
             return
         self._nvml = pynvml
