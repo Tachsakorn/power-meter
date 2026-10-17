@@ -12,3 +12,5 @@ config.toml
 usage.json
 *.tmp
 *.bak
+
+test-results.txt

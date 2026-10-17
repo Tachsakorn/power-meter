@@ -3,8 +3,12 @@
 from __future__ import annotations
 
 import contextlib
+import dataclasses
+import tempfile
 import threading
+import time
 from datetime import date, timedelta
+from pathlib import Path
 
 from .config import Config
 from .monitor import Monitor, Sample
@@ -35,6 +39,45 @@ def run(cfg: Config) -> None:
         monitor.run(threading.Event(), on_sample=show)
     s = monitor.session
     print(f"\n\nบันทึกแล้ว: รอบนี้ใช้ {s.wh / 1000:.3f} kWh = {s.baht:.2f} บาท")
+
+
+def check(cfg: Config, samples: int = 5) -> None:
+    """Print what the app can see on this machine, then take a few readings.
+
+    Readings go to a throwaway log so the check never adds to real usage.
+    """
+    with tempfile.TemporaryDirectory() as tmp:
+        cfg = dataclasses.replace(cfg, data_file=Path(tmp) / "usage.json")
+        monitor = Monitor(cfg)
+        hw = monitor.hw
+        print(f"เครื่อง:      {'โน้ตบุ๊ก' if hw.laptop else 'คอมตั้งโต๊ะ'}")
+        print(f"CPU:         {hw.cpu} (ใช้ {monitor.cpu_tdp:.0f} W เป็นค่าเต็มกำลัง)")
+        print(f"การ์ดจอที่เจอ: {', '.join(hw.gpus) or 'ไม่พบ'}")
+        print(f"การ์ดจอที่คิด: {monitor.gpu_name or 'ไม่มี (ใช้กราฟิกในตัว CPU)'}")
+        if monitor.gpu is not None:
+            print(f"  NVML:      {'ใช้ได้' if monitor.gpu.available else monitor.gpu.error}")
+        if monitor.gpu_load is not None:
+            print(
+                f"  GPU load:  {'ใช้ได้' if monitor.gpu_load.available else monitor.gpu_load.error}"
+            )
+        if monitor.battery is not None:
+            print(f"แบต:         {'ใช้ได้' if monitor.battery.available else monitor.battery.error}")
+        print(
+            f"CPU load:    {'ใช้ได้' if monitor.cpu_load.error is None else monitor.cpu_load.error}"
+        )
+        print(f"ส่วนอื่น:      {monitor.base_watts:.0f} W")
+        print()
+
+        for _ in range(samples):
+            time.sleep(1)
+            s = monitor.step()
+            cpu = f"{monitor.cpu_util:.0%}" if monitor.cpu_util is not None else "-"
+            gpu = f"{monitor.gpu_util:.0%}" if monitor.gpu_util is not None else "-"
+            print(
+                f"{s.watts:6.1f} W  {s.baht_per_hour:.2f} ฿/ชม. | "
+                f"CPU {cpu} ({monitor.cpu_source}) | GPU {gpu} ({monitor.gpu_source})"
+            )
+        monitor.save()
 
 
 def report(cfg: Config, days: int) -> None:

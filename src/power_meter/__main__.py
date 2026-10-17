@@ -25,6 +25,7 @@ def main() -> None:
     sub.add_parser("run", help="monitor in the console")
     rep = sub.add_parser("report", help="show daily usage")
     rep.add_argument("-d", "--days", type=int, default=7)
+    sub.add_parser("check", help="show detected hardware and take a few readings")
     args = parser.parse_args()
 
     cfg = config.load(args.config)
@@ -32,6 +33,8 @@ def main() -> None:
         console.report(cfg, args.days)
     elif args.command == "run":
         console.run(cfg)
+    elif args.command == "check":
+        console.check(cfg)
     else:
         from . import gui
 
