@@ -1,0 +1,26 @@
+# Copy this file to config.toml and edit what you need.
+# Anything left out uses the default shown here.
+
+[tariff]
+type = "tou"             # "tou" (day/night meter) or "flat" (ordinary meter)
+ft = 0.1623              # baht/kWh, set by ERC every 4 months (this is Sep-Dec 2026)
+vat = 0.07
+
+# TOU, residential below 12 kV (MEA) / 22 kV (PEA)
+peak_rate = 5.7982
+off_peak_rate = 2.6369
+peak_hours = [9, 22]     # Mon-Fri 09:00-22:00; weekends and public holidays are off-peak
+
+# Used when type = "flat"
+flat_rate = 3.78
+
+[estimate]
+base_watts = 15.0        # display, RAM, SSD, fans: calibrate against a wall meter
+cpu_fallback_watts = 12.0
+adapter_efficiency = 0.88
+
+[app]
+interval_sec = 2.0
+save_every_sec = 30
+lhm_url = "http://localhost:8085/data.json"
+# data_file = "~/power-meter-usage.json"   # default: %LOCALAPPDATA%\power-meter\usage.json

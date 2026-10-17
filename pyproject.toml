@@ -1,0 +1,31 @@
+[project]
+name = "power-meter"
+version = "0.1.0"
+description = "Track how much electricity your PC uses and what it costs in Thai baht"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.11"
+dependencies = [
+    "wmi; sys_platform == 'win32'",
+    "nvidia-ml-py",
+    "holidays",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "ruff"]
+
+[project.scripts]
+power-meter = "power_meter.__main__:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
