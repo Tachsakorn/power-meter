@@ -60,13 +60,12 @@ def report(cfg: Config, days: int) -> None:
 
 
 def _print_status(monitor: Monitor) -> None:
-    def mark(ok: bool) -> str:
-        return "ok" if ok else "ไม่พบ"
-
-    print(
-        f"แบต: {mark(monitor.battery.available)} | GPU: {mark(monitor.gpu.available)} | "
-        f"CPU (LibreHardwareMonitor): {mark(monitor.cpu.read_watts() is not None)}"
-    )
+    hw = monitor.hw
+    print(f"{'โน้ตบุ๊ก' if hw.laptop else 'คอมตั้งโต๊ะ'} | CPU: {hw.cpu} (~{monitor.cpu_tdp:.0f} W)")
+    if monitor.gpu_name:
+        measured = monitor.gpu is not None and monitor.gpu.available
+        how = "วัดจริง" if measured else f"ประมาณจาก % ใช้งาน (~{monitor.gpu_board:.0f} W)"
+        print(f"การ์ดจอ: {monitor.gpu_name} {how}")
     t = monitor.cfg.tariff
     if isinstance(t, TouTariff):
         print(

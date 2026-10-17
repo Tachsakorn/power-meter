@@ -308,6 +308,120 @@ def _preload_nvml(pynvml) -> None:
             continue
 
 
+class CpuLoadSensor:
+    """Overall CPU utilisation, 0..1. Needs no special rights."""
+
+    def __init__(self) -> None:
+        self.error: str | None = None
+        try:
+            import psutil
+        except ImportError as exc:
+            self._psutil = None
+            self.error = f"missing {exc.name}"
+            return
+        self._psutil = psutil
+        psutil.cpu_percent(None)  # the first call only sets the baseline
+
+    def read(self) -> float | None:
+        if self._psutil is None:
+            return None
+        return self._psutil.cpu_percent(None) / 100
+
+
+class GpuLoadSensor:
+    """Busiest-engine GPU utilisation, 0..1, from Windows performance counters.
+
+    The same numbers Task Manager shows; available to any user and to any
+    GPU vendor, so it covers cards NVML can't read.
+    """
+
+    PATH = r"\GPU Engine(*engtype_3D)\Utilization Percentage"
+
+    def __init__(self) -> None:
+        self.error: str | None = None
+        self._pdh = None
+        if sys.platform != "win32":
+            self.error = "Windows only"
+            return
+        try:
+            pdh = ctypes.WinDLL("pdh")
+            for fn in ("PdhOpenQueryW", "PdhAddEnglishCounterW", "PdhCollectQueryData"):
+                getattr(pdh, fn).restype = ctypes.c_uint32
+            pdh.PdhGetFormattedCounterArrayW.restype = ctypes.c_uint32
+            pdh.PdhOpenQueryW.argtypes = [wintypes.LPCWSTR, ctypes.c_size_t, ctypes.c_void_p]
+            pdh.PdhAddEnglishCounterW.argtypes = [
+                wintypes.HANDLE,
+                wintypes.LPCWSTR,
+                ctypes.c_size_t,
+                ctypes.c_void_p,
+            ]
+            pdh.PdhCollectQueryData.argtypes = [wintypes.HANDLE]
+            pdh.PdhGetFormattedCounterArrayW.argtypes = [
+                wintypes.HANDLE,
+                wintypes.DWORD,
+                ctypes.POINTER(wintypes.DWORD),
+                ctypes.POINTER(wintypes.DWORD),
+                ctypes.c_void_p,
+            ]
+            self._query = wintypes.HANDLE()
+            self._counter = wintypes.HANDLE()
+            _check_pdh(pdh.PdhOpenQueryW(None, 0, ctypes.byref(self._query)))
+            _check_pdh(
+                pdh.PdhAddEnglishCounterW(self._query, self.PATH, 0, ctypes.byref(self._counter))
+            )
+            _check_pdh(pdh.PdhCollectQueryData(self._query))
+            self._pdh = pdh
+        except Exception as exc:
+            self.error = describe(exc)
+
+    @property
+    def available(self) -> bool:
+        return self._pdh is not None
+
+    def read(self) -> float | None:
+        if self._pdh is None:
+            return None
+        try:
+            _check_pdh(self._pdh.PdhCollectQueryData(self._query))
+            size = wintypes.DWORD(0)
+            count = wintypes.DWORD(0)
+            fmt_double = 0x200
+            status = self._pdh.PdhGetFormattedCounterArrayW(
+                self._counter, fmt_double, ctypes.byref(size), ctypes.byref(count), None
+            )
+            if status != _PDH_MORE_DATA:
+                return 0.0  # no 3D engine is active right now
+            buf = (ctypes.c_byte * size.value)()
+            _check_pdh(
+                self._pdh.PdhGetFormattedCounterArrayW(
+                    self._counter, fmt_double, ctypes.byref(size), ctypes.byref(count), buf
+                )
+            )
+            items = ctypes.cast(buf, ctypes.POINTER(_PdhCounterItem))
+            # One instance per process per engine. Summing per process and
+            # taking the total matches Task Manager's "3D" graph.
+            busy = sum(items[i].value for i in range(count.value) if items[i].status in (0, 1))
+        except Exception:
+            return None
+        return min(1.0, busy / 100)
+
+
+_PDH_MORE_DATA = 0x800007D2
+
+
+class _PdhCounterItem(ctypes.Structure):
+    _fields_ = [
+        ("name", ctypes.c_wchar_p),
+        ("status", wintypes.DWORD),
+        ("value", ctypes.c_double),
+    ]
+
+
+def _check_pdh(status: int) -> None:
+    if status != 0:
+        raise OSError(f"PDH error 0x{status & 0xFFFFFFFF:08X}")
+
+
 class LhmCpuSensor:
     """CPU package power from LibreHardwareMonitor's built-in web server."""
 

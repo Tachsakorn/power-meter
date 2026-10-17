@@ -10,6 +10,7 @@ dependencies = [
     "nvidia-ml-py",
     "holidays",
     "pywebview>=5",
+    "psutil",
 ]
 
 [project.optional-dependencies]

@@ -435,24 +435,65 @@ function drawDays(days, isTou) {
 
 /* Sources panel */
 
+const SOURCE_TEXT = {
+  measured: "วัดจริง",
+  load: "ประมาณจาก % ใช้งาน",
+  fixed: "ค่าคงที่",
+  none: "ไม่พบ",
+};
+
+function percent(util) {
+  return util == null ? "" : ` (ใช้งาน ${Math.round(util * 100)}%)`;
+}
+
 function drawSources(state) {
-  $("sourceNote").textContent = state.measured
-    ? "ตอนนี้ถอดปลั๊กอยู่ แอปอ่านไฟทั้งเครื่องจากแบตได้ตรง ๆ ตัวเลขแม่นที่สุด"
-    : "ตอนเสียบปลั๊ก แอปรวมไฟจาก CPU, GPU และส่วนอื่น ๆ ของเครื่อง ตัวเลขจึงเป็นค่าประมาณ";
-  const items = [
-    ["แบตเตอรี่", state.sensors.battery],
-    ["การ์ดจอ (NVIDIA)", state.sensors.gpu],
-    ["CPU (ผ่าน LibreHardwareMonitor)", state.sensors.cpu],
+  const hw = state.hardware;
+  const { battery, cpu, gpu } = state.sensors;
+
+  let note;
+  if (state.measured) {
+    note = "ตอนนี้ถอดปลั๊กอยู่ แอปอ่านไฟทั้งเครื่องจากแบตได้ตรง ๆ ตัวเลขแม่นที่สุด";
+  } else if (hw.laptop) {
+    note = "ตอนเสียบปลั๊ก แอปรวมไฟจาก CPU, การ์ดจอ และส่วนอื่น ๆ ของเครื่อง ตัวเลขจึงเป็นค่าประมาณ";
+  } else {
+    note =
+      "คอมตั้งโต๊ะไม่มีแบตให้วัดทั้งเครื่อง แอปเลยรวมไฟจาก CPU, การ์ดจอ และส่วนอื่น ๆ " +
+      "ตามการใช้งานจริง ตัวเลขจึงเป็นค่าประมาณ ไม่รวมจอ";
+  }
+  $("sourceNote").textContent = note;
+
+  const rows = [
+    {
+      name: "CPU",
+      source: cpu.source,
+      detail: `${hw.cpu}${percent(cpu.util)}${cpu.source === "load" ? `, ราว ${Math.round(hw.cpu_tdp)} W เต็มกำลัง` : ""}`,
+    },
+    {
+      name: "การ์ดจอ",
+      source: gpu.source,
+      detail: hw.gpu
+        ? `${hw.gpu}${percent(gpu.util)}${gpu.source === "load" ? `, ราว ${Math.round(hw.gpu_board)} W เต็มกำลัง` : ""}`
+        : "ใช้กราฟิกในตัว CPU (รวมอยู่ในไฟ CPU แล้ว)",
+    },
+    {
+      name: "เมนบอร์ด, RAM, พัดลม, ไดรฟ์",
+      source: "fixed",
+      detail: `ประมาณ ${Math.round(hw.base_watts)} W`,
+    },
   ];
+  if (hw.laptop) {
+    rows.unshift({ name: "แบตเตอรี่", source: battery.source, detail: battery.detail });
+  }
+
   $("sensors").replaceChildren(
-    ...items.map(([name, { ok, detail }]) => {
-      const li = el("li", ok ? "sensor is-on" : "sensor");
-      li.append(el("span", null, name), el("span", null, ok ? "วัดได้" : "ไม่พบ"));
-      if (!ok && detail) li.append(el("small", "sensor-detail", detail));
+    ...rows.map(({ name, source, detail }) => {
+      const li = el("li", source === "measured" ? "sensor is-on" : "sensor");
+      li.append(el("span", null, name), el("span", null, SOURCE_TEXT[source] ?? source));
+      if (detail) li.append(el("small", "sensor-detail", detail));
       return li;
     }),
   );
-  $("cpuTip").hidden = state.sensors.cpu.ok;
+  $("cpuTip").hidden = cpu.source === "measured";
 }
 
 let latest = null;

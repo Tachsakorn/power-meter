@@ -111,10 +111,26 @@ def build_state(monitor: Monitor, now: datetime) -> dict:
         noon = now.replace(hour=12, minute=0, second=0, microsecond=0)
         state["off_peak_all_day"] = tariff.period(noon) == OFF_PEAK
         state["holiday"] = now.date() in tariff.holidays
+    state["hardware"] = {
+        "laptop": monitor.hw.laptop,
+        "cpu": monitor.hw.cpu,
+        "cpu_tdp": monitor.cpu_tdp,
+        "gpu": monitor.gpu_name,
+        "gpu_board": monitor.gpu_board,
+        "base_watts": monitor.base_watts,
+    }
     state["sensors"] = {
-        "battery": {"ok": monitor.battery.available, "detail": monitor.battery.error},
-        "gpu": {"ok": monitor.gpu.available, "detail": monitor.gpu.error},
-        "cpu": {"ok": monitor.cpu_available, "detail": None},
+        "battery": {
+            "source": "measured" if monitor.battery and monitor.battery.available else "none",
+            "detail": monitor.battery.error if monitor.battery else None,
+        },
+        "cpu": {"source": monitor.cpu_source, "util": monitor.cpu_util},
+        "gpu": {
+            "source": monitor.gpu_source,
+            "util": monitor.gpu_util,
+            "detail": (monitor.gpu.error if monitor.gpu else None)
+            or (monitor.gpu_load.error if monitor.gpu_load else None),
+        },
     }
     return state
 

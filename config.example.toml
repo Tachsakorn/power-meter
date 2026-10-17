@@ -15,9 +15,12 @@ peak_hours = [9, 22]     # Mon-Fri 09:00-22:00; weekends and public holidays are
 flat_rate = 3.78
 
 [estimate]
-base_watts = 15.0        # display, RAM, SSD, fans: calibrate against a wall meter
-cpu_fallback_watts = 12.0
-adapter_efficiency = 0.88
+# Worked out from your hardware unless you set them. Calibrate against a
+# wall meter if you have one.
+# base_watts = 40.0      # everything except CPU and GPU (15 on laptops)
+# cpu_tdp_watts = 105    # guessed from the CPU model
+# gpu_board_watts = 220  # guessed from the GPU model
+adapter_efficiency = 0.88  # power supply or laptop adapter
 
 [app]
 interval_sec = 2.0
