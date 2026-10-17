@@ -8,11 +8,16 @@ laptop has an NVIDIA GPU, LibreHardwareMonitor may not be running).
 from __future__ import annotations
 
 import contextlib
+import ctypes
+import functools
 import json
-import threading
+import os
+import sys
 import urllib.error
 import urllib.request
+from ctypes import wintypes
 from dataclasses import dataclass
+from pathlib import Path
 
 
 @dataclass(frozen=True)
@@ -23,53 +28,220 @@ class BatteryReading:
 
 
 class BatterySensor:
-    """Reads the battery fuel gauge through WMI (root\\wmi BatteryStatus)."""
+    """Reads the battery's charge/discharge rate straight from the driver.
+
+    Uses IOCTL_BATTERY_QUERY_STATUS, the same call powercfg uses. Unlike the
+    WMI BatteryStatus class, it exists on every laptop and needs no admin.
+    """
 
     def __init__(self) -> None:
-        # COM objects belong to the thread that made them, and the monitor
-        # reads from a worker thread, so each thread gets its own connection.
-        self._local = threading.local()
         self.error: str | None = None
+        self._path: str | None = None
+        if sys.platform != "win32":
+            self.error = "Windows only"
+            return
         try:
-            self._status()
-        except ImportError as exc:
-            self.error = f"missing {exc.name}"
-        except Exception as exc:  # pywin32 raises x_wmi / com_error, not a common base
+            self._path = _battery_device_path()
+            self._query()
+        except OSError as exc:
             self.error = describe(exc)
 
     @property
     def available(self) -> bool:
         return self.error is None
 
-    def _status(self):
-        conn = getattr(self._local, "conn", None)
-        if conn is None:
-            import pythoncom
-            import wmi
-
-            pythoncom.CoInitialize()
-            conn = wmi.WMI(namespace="root\\wmi")
-            self._local.conn = conn
-        statuses = conn.BatteryStatus()
-        if not statuses:
-            raise LookupError("no battery")
-        return statuses[0]
-
     def read(self) -> BatteryReading | None:
         if self.error is not None:
             return None
         try:
-            status = self._status()
-        except Exception:  # transient COM errors happen after sleep/resume
-            self._local.conn = None
+            state, rate_mw = self._query()
+        except OSError:  # the handle can go stale after sleep/resume
             return None
-        # WMI reports rates in milliwatts.
-        charge_mw = status.ChargeRate if status.Charging else 0
+        if rate_mw == _UNKNOWN_RATE:
+            rate_mw = 0
         return BatteryReading(
-            on_ac=bool(status.PowerOnline),
-            discharge_w=(status.DischargeRate or 0) / 1000,
-            charge_w=(charge_mw or 0) / 1000,
+            on_ac=bool(state & _POWER_ON_LINE),
+            discharge_w=-rate_mw / 1000 if state & _DISCHARGING else 0.0,
+            charge_w=rate_mw / 1000 if state & _CHARGING else 0.0,
         )
+
+    def _query(self) -> tuple[int, int]:
+        k32 = _kernel32()
+        handle = k32.CreateFileW(self._path, 0xC0000000, 3, None, 3, 0, None)
+        if handle in (None, _INVALID_HANDLE):
+            raise ctypes.WinError(ctypes.get_last_error())
+        try:
+            tag = wintypes.ULONG()
+            timeout = wintypes.ULONG(0)
+            returned = wintypes.DWORD()
+            if (
+                not k32.DeviceIoControl(
+                    handle,
+                    _IOCTL_QUERY_TAG,
+                    ctypes.byref(timeout),
+                    4,
+                    ctypes.byref(tag),
+                    4,
+                    ctypes.byref(returned),
+                    None,
+                )
+                or not tag.value
+            ):
+                raise ctypes.WinError(ctypes.get_last_error())
+            wait = _BatteryWaitStatus(BatteryTag=tag.value)
+            status = _BatteryStatus()
+            if not k32.DeviceIoControl(
+                handle,
+                _IOCTL_QUERY_STATUS,
+                ctypes.byref(wait),
+                ctypes.sizeof(wait),
+                ctypes.byref(status),
+                ctypes.sizeof(status),
+                ctypes.byref(returned),
+                None,
+            ):
+                raise ctypes.WinError(ctypes.get_last_error())
+            return status.PowerState, status.Rate
+        finally:
+            k32.CloseHandle(handle)
+
+
+_IOCTL_QUERY_TAG = 0x294040
+_INVALID_HANDLE = wintypes.HANDLE(-1).value
+_IOCTL_QUERY_STATUS = 0x29404C
+_POWER_ON_LINE = 0x1
+_DISCHARGING = 0x2
+_CHARGING = 0x4
+_UNKNOWN_RATE = -0x80000000
+
+
+class _BatteryWaitStatus(ctypes.Structure):
+    _fields_ = [
+        ("BatteryTag", ctypes.c_ulong),
+        ("Timeout", ctypes.c_ulong),
+        ("PowerState", ctypes.c_ulong),
+        ("LowCapacity", ctypes.c_ulong),
+        ("HighCapacity", ctypes.c_ulong),
+    ]
+
+
+class _BatteryStatus(ctypes.Structure):
+    _fields_ = [
+        ("PowerState", ctypes.c_ulong),
+        ("Capacity", ctypes.c_ulong),
+        ("Voltage", ctypes.c_ulong),
+        ("Rate", ctypes.c_long),
+    ]
+
+
+class _Guid(ctypes.Structure):
+    _fields_ = [
+        ("Data1", ctypes.c_ulong),
+        ("Data2", ctypes.c_ushort),
+        ("Data3", ctypes.c_ushort),
+        ("Data4", ctypes.c_ubyte * 8),
+    ]
+
+
+class _DeviceInterfaceData(ctypes.Structure):
+    _fields_ = [
+        ("cbSize", ctypes.c_ulong),
+        ("InterfaceClassGuid", _Guid),
+        ("Flags", ctypes.c_ulong),
+        ("Reserved", ctypes.c_size_t),
+    ]
+
+
+@functools.cache
+def _kernel32():
+    # A private WinDLL so our argtypes can't clash with other users of windll,
+    # and so 64-bit handles aren't truncated to int.
+    k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    k32.CreateFileW.restype = wintypes.HANDLE
+    k32.CreateFileW.argtypes = [
+        wintypes.LPCWSTR,
+        wintypes.DWORD,
+        wintypes.DWORD,
+        ctypes.c_void_p,
+        wintypes.DWORD,
+        wintypes.DWORD,
+        wintypes.HANDLE,
+    ]
+    k32.DeviceIoControl.restype = wintypes.BOOL
+    k32.DeviceIoControl.argtypes = [
+        wintypes.HANDLE,
+        wintypes.DWORD,
+        ctypes.c_void_p,
+        wintypes.DWORD,
+        ctypes.c_void_p,
+        wintypes.DWORD,
+        ctypes.POINTER(wintypes.DWORD),
+        ctypes.c_void_p,
+    ]
+    k32.CloseHandle.argtypes = [wintypes.HANDLE]
+    return k32
+
+
+def _battery_device_path() -> str:
+    """Device path of the first battery, found through SetupAPI."""
+    setupapi = ctypes.WinDLL("setupapi", use_last_error=True)
+    setupapi.SetupDiGetClassDevsW.restype = ctypes.c_void_p
+    setupapi.SetupDiGetClassDevsW.argtypes = [
+        ctypes.c_void_p,
+        wintypes.LPCWSTR,
+        wintypes.HWND,
+        wintypes.DWORD,
+    ]
+    setupapi.SetupDiEnumDeviceInterfaces.argtypes = [
+        ctypes.c_void_p,
+        ctypes.c_void_p,
+        ctypes.c_void_p,
+        wintypes.DWORD,
+        ctypes.c_void_p,
+    ]
+    setupapi.SetupDiGetDeviceInterfaceDetailW.argtypes = [
+        ctypes.c_void_p,
+        ctypes.c_void_p,
+        ctypes.c_void_p,
+        wintypes.DWORD,
+        ctypes.POINTER(wintypes.DWORD),
+        ctypes.c_void_p,
+    ]
+    setupapi.SetupDiDestroyDeviceInfoList.argtypes = [ctypes.c_void_p]
+
+    guid = _Guid(
+        0x72631E54,
+        0x78A4,
+        0x11D0,
+        (ctypes.c_ubyte * 8)(0xBC, 0xF7, 0x00, 0xAA, 0x00, 0xB7, 0xB3, 0x2A),
+    )
+    present_interfaces = 0x2 | 0x10  # DIGCF_PRESENT | DIGCF_DEVICEINTERFACE
+    devs = setupapi.SetupDiGetClassDevsW(ctypes.byref(guid), None, None, present_interfaces)
+    if devs in (None, _INVALID_HANDLE):
+        raise ctypes.WinError(ctypes.get_last_error())
+    try:
+        iface = _DeviceInterfaceData(cbSize=ctypes.sizeof(_DeviceInterfaceData))
+        if not setupapi.SetupDiEnumDeviceInterfaces(
+            devs, None, ctypes.byref(guid), 0, ctypes.byref(iface)
+        ):
+            raise OSError("no battery found")
+        needed = wintypes.DWORD()
+        setupapi.SetupDiGetDeviceInterfaceDetailW(
+            devs, ctypes.byref(iface), None, 0, ctypes.byref(needed), None
+        )
+        buf = ctypes.create_string_buffer(needed.value)
+        # cbSize is the fixed part of SP_DEVICE_INTERFACE_DETAIL_DATA_W:
+        # a DWORD and one WCHAR, padded to 8 bytes on 64-bit Windows.
+        ctypes.cast(buf, ctypes.POINTER(wintypes.DWORD))[0] = (
+            8 if ctypes.sizeof(ctypes.c_void_p) == 8 else 6
+        )
+        if not setupapi.SetupDiGetDeviceInterfaceDetailW(
+            devs, ctypes.byref(iface), buf, needed, None, None
+        ):
+            raise ctypes.WinError(ctypes.get_last_error())
+        return ctypes.wstring_at(ctypes.addressof(buf) + 4)
+    finally:
+        setupapi.SetupDiDestroyDeviceInfoList(devs)
 
 
 class NvidiaSensor:
@@ -85,6 +257,7 @@ class NvidiaSensor:
             self.error = f"missing {exc.name}"
             return
         try:
+            _preload_nvml(pynvml)
             pynvml.nvmlInit()
             count = pynvml.nvmlDeviceGetCount()
             self._handles = [pynvml.nvmlDeviceGetHandleByIndex(i) for i in range(count)]
@@ -105,6 +278,31 @@ class NvidiaSensor:
         except self._nvml.NVMLError:
             # A laptop dGPU that is powered down (Optimus) draws ~0 W.
             return 0.0
+
+
+def _preload_nvml(pynvml) -> None:
+    """Load nvml.dll ourselves when it isn't where pynvml looks.
+
+    pynvml only tries System32 and the old NVSMI folder; some (DCH) drivers
+    keep nvml.dll only inside the driver store.
+    """
+    if sys.platform != "win32" or pynvml.nvmlLib is not None:
+        return
+    windir = Path(os.environ.get("WINDIR", r"C:\Windows"))
+    candidates = [
+        windir / "System32" / "nvml.dll",
+        Path(os.environ.get("PROGRAMFILES", r"C:\Program Files"))
+        / "NVIDIA Corporation"
+        / "NVSMI"
+        / "nvml.dll",
+        *(windir / "System32" / "DriverStore" / "FileRepository").glob("nv*/nvml.dll"),
+    ]
+    for dll in candidates:
+        try:
+            pynvml.nvmlLib = ctypes.CDLL(str(dll))
+            return
+        except OSError:
+            continue
 
 
 class LhmCpuSensor:
