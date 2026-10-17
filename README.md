@@ -88,4 +88,4 @@ ruff check . && ruff format .
 
 ## License
 
-MIT. ฟอนต์ IBM Plex Sans Thai ใช้ SIL Open Font License (ดู `src/power_meter/web/fonts/OFL.txt`)
+MIT. ฟอนต์ IBM Plex Sans Thai และ Mali ใช้ SIL Open Font License (ดู `OFL.txt` ในโฟลเดอร์ `fonts`)

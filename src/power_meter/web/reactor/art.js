@@ -6,8 +6,8 @@
 window.ReactorArt = {
   dynamo: `
     <svg viewBox="0 0 120 90" aria-hidden="true">
-      <rect x="18" y="70" width="84" height="8" class="rx-steel"/>
-      <rect x="30" y="30" width="54" height="40" rx="6" class="rx-enamel"/>
+      <rect x="18" y="70" width="84" height="8" rx="2.5" class="rx-steel"/>
+      <rect x="30" y="30" width="54" height="40" rx="10" class="rx-enamel"/>
       <path d="M38 30v40M46 30v40M54 30v40M62 30v40M70 30v40" class="rx-line-thin"/>
       <circle cx="92" cy="50" r="15" class="rx-housing"/>
       <g class="rx-spin" style="transform-origin:92px 50px">
@@ -19,7 +19,7 @@ window.ReactorArt = {
   solar: `
     <svg viewBox="0 0 120 90" aria-hidden="true">
       <path d="M40 78l6-22M80 78l6-22" class="rx-line"/>
-      <rect x="14" y="78" width="92" height="5" class="rx-steel"/>
+      <rect x="14" y="78" width="92" height="5" rx="2.5" class="rx-steel"/>
       <g class="rx-panel">
         <path d="M20 58L36 22h68L88 58z" class="rx-cell-blue"/>
         <path d="M28 40h68M24 49h68M44 22l-12 36M64 22l-12 36M84 22l-12 36" class="rx-line-thin-light"/>
@@ -30,7 +30,7 @@ window.ReactorArt = {
   wind: `
     <svg viewBox="0 0 120 90" aria-hidden="true">
       <path d="M57 30L52 84h16L63 30z" class="rx-enamel"/>
-      <rect x="40" y="82" width="40" height="5" class="rx-steel"/>
+      <rect x="40" y="82" width="40" height="5" rx="2.5" class="rx-steel"/>
       <g class="rx-spin-slow" style="transform-origin:60px 28px">
         <path d="M60 28C56 18 57 6 60 2c3 4 4 16 0 26z" class="rx-blade-fill"/>
         <path d="M60 28C56 18 57 6 60 2c3 4 4 16 0 26z" class="rx-blade-fill" transform="rotate(120 60 28)"/>
@@ -40,7 +40,7 @@ window.ReactorArt = {
     </svg>`,
   lab: `
     <svg viewBox="0 0 120 90" aria-hidden="true">
-      <rect x="14" y="78" width="92" height="5" class="rx-steel"/>
+      <rect x="14" y="78" width="92" height="5" rx="2.5" class="rx-steel"/>
       <path d="M50 12h20M54 12v22L34 74a4 4 0 0 0 4 4h44a4 4 0 0 0 4-4L66 34V12" class="rx-glass"/>
       <path d="M41 60h38l7 14a4 4 0 0 1-4 4H38a4 4 0 0 1-4-4z" class="rx-liquid"/>
       <circle cx="52" cy="70" r="3" class="rx-bubble"/>
@@ -50,14 +50,14 @@ window.ReactorArt = {
     </svg>`,
   battery: `
     <svg viewBox="0 0 120 90" aria-hidden="true">
-      <rect x="14" y="78" width="92" height="5" class="rx-steel"/>
-      <rect x="24" y="22" width="72" height="54" rx="4" class="rx-housing"/>
+      <rect x="14" y="78" width="92" height="5" rx="2.5" class="rx-steel"/>
+      <rect x="24" y="22" width="72" height="54" rx="9" class="rx-housing"/>
       <rect x="36" y="16" width="10" height="6" class="rx-ink-fill"/>
       <rect x="74" y="16" width="10" height="6" class="rx-ink-fill"/>
-      <rect x="32" y="30" width="12" height="38" class="rx-charge"/>
-      <rect x="48" y="30" width="12" height="38" class="rx-charge rx-charge-2"/>
-      <rect x="64" y="30" width="12" height="38" class="rx-charge rx-charge-3"/>
-      <rect x="80" y="30" width="8" height="38" class="rx-charge rx-charge-4"/>
+      <rect x="32" y="30" width="12" height="38" rx="3" class="rx-charge"/>
+      <rect x="48" y="30" width="12" height="38" rx="3" class="rx-charge rx-charge-2"/>
+      <rect x="64" y="30" width="12" height="38" rx="3" class="rx-charge rx-charge-3"/>
+      <rect x="80" y="30" width="8" height="38" rx="3" class="rx-charge rx-charge-4"/>
     </svg>`,
   fission: `
     <svg viewBox="0 0 120 90" aria-hidden="true">
@@ -71,7 +71,7 @@ window.ReactorArt = {
     </svg>`,
   fusion: `
     <svg viewBox="0 0 120 90" aria-hidden="true">
-      <rect x="14" y="80" width="92" height="5" class="rx-steel"/>
+      <rect x="14" y="80" width="92" height="5" rx="2.5" class="rx-steel"/>
       <ellipse cx="60" cy="48" rx="46" ry="26" class="rx-housing"/>
       <ellipse cx="60" cy="48" rx="22" ry="11" class="rx-hole"/>
       <ellipse cx="60" cy="48" rx="34" ry="18" class="rx-plasma"/>
