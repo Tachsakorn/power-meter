@@ -99,9 +99,9 @@ def build_state(monitor: Monitor, now: datetime) -> dict:
         state["off_peak_all_day"] = tariff.period(noon) == OFF_PEAK
         state["holiday"] = now.date() in tariff.holidays
     state["sensors"] = {
-        "battery": monitor.battery.available,
-        "gpu": monitor.gpu.available,
-        "cpu": monitor.cpu_available,
+        "battery": {"ok": monitor.battery.available, "detail": monitor.battery.error},
+        "gpu": {"ok": monitor.gpu.available, "detail": monitor.gpu.error},
+        "cpu": {"ok": monitor.cpu_available, "detail": None},
     }
     return state
 

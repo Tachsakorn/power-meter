@@ -445,13 +445,14 @@ function drawSources(state) {
     ["CPU (ผ่าน LibreHardwareMonitor)", state.sensors.cpu],
   ];
   $("sensors").replaceChildren(
-    ...items.map(([name, on]) => {
-      const li = el("li", on ? "sensor is-on" : "sensor");
-      li.append(el("span", null, name), el("span", null, on ? "วัดได้" : "ไม่พบ"));
+    ...items.map(([name, { ok, detail }]) => {
+      const li = el("li", ok ? "sensor is-on" : "sensor");
+      li.append(el("span", null, name), el("span", null, ok ? "วัดได้" : "ไม่พบ"));
+      if (!ok && detail) li.append(el("small", "sensor-detail", detail));
       return li;
     }),
   );
-  $("cpuTip").hidden = state.sensors.cpu;
+  $("cpuTip").hidden = state.sensors.cpu.ok;
 }
 
 let latest = null;

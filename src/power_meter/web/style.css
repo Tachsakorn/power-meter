@@ -282,7 +282,15 @@ body.compact .rate-meta {
 
 .sensor {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
+}
+
+.sensor-detail {
+  flex-basis: 100%;
+  font-size: 12px;
+  color: var(--muted);
+  word-break: break-word;
 }
 
 .sensor span:last-child {

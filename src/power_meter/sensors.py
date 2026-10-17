@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import contextlib
 import json
+import threading
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
@@ -25,28 +26,42 @@ class BatterySensor:
     """Reads the battery fuel gauge through WMI (root\\wmi BatteryStatus)."""
 
     def __init__(self) -> None:
-        self._conn = None
+        # COM objects belong to the thread that made them, and the monitor
+        # reads from a worker thread, so each thread gets its own connection.
+        self._local = threading.local()
+        self.error: str | None = None
         try:
-            import wmi
-        except ImportError:
-            return
-        try:
-            conn = wmi.WMI(namespace="root\\wmi")
-            conn.BatteryStatus()
-        except Exception:  # pywin32 raises x_wmi/com_error; also no battery on desktops
-            return
-        self._conn = conn
+            self._status()
+        except ImportError as exc:
+            self.error = f"missing {exc.name}"
+        except Exception as exc:  # pywin32 raises x_wmi / com_error, not a common base
+            self.error = describe(exc)
 
     @property
     def available(self) -> bool:
-        return self._conn is not None
+        return self.error is None
+
+    def _status(self):
+        conn = getattr(self._local, "conn", None)
+        if conn is None:
+            import pythoncom
+            import wmi
+
+            pythoncom.CoInitialize()
+            conn = wmi.WMI(namespace="root\\wmi")
+            self._local.conn = conn
+        statuses = conn.BatteryStatus()
+        if not statuses:
+            raise LookupError("no battery")
+        return statuses[0]
 
     def read(self) -> BatteryReading | None:
-        if self._conn is None:
+        if self.error is not None:
             return None
         try:
-            status = self._conn.BatteryStatus()[0]
+            status = self._status()
         except Exception:  # transient COM errors happen after sleep/resume
+            self._local.conn = None
             return None
         # WMI reports rates in milliwatts.
         charge_mw = status.ChargeRate if status.Charging else 0
@@ -63,15 +78,18 @@ class NvidiaSensor:
     def __init__(self) -> None:
         self._nvml = None
         self._handles: list = []
+        self.error: str | None = None
         try:
             import pynvml
-        except ImportError:
+        except ImportError as exc:
+            self.error = f"missing {exc.name}"
             return
         try:
             pynvml.nvmlInit()
             count = pynvml.nvmlDeviceGetCount()
             self._handles = [pynvml.nvmlDeviceGetHandleByIndex(i) for i in range(count)]
-        except pynvml.NVMLError:  # no driver, or no NVIDIA GPU at all
+        except pynvml.NVMLError as exc:  # no driver, or no NVIDIA GPU at all
+            self.error = describe(exc)
             return
         self._nvml = pynvml
 
@@ -121,3 +139,9 @@ def find_cpu_package_watts(tree: dict) -> float | None:
 
     walk(tree, in_cpu=False)
     return max(readings, default=None)
+
+
+def describe(exc: BaseException) -> str:
+    """One line explaining why a sensor isn't available, for the info panel."""
+    text = " ".join(str(exc).split())
+    return f"{type(exc).__name__}: {text}"[:160] if text else type(exc).__name__
