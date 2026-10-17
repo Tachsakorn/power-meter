@@ -10,7 +10,11 @@
 
 ## ติดตั้ง
 
-ต้องใช้ Windows และ Python 3.11 ขึ้นไป
+ดาวน์โหลด **PowerMeter.exe** จากหน้า [Releases](https://github.com/Tachsakorn/power-meter/releases/latest) แล้วดับเบิลคลิกเปิด ไม่ต้องลง Python (ต้องใช้ Windows 10 หรือ 11)
+
+ครั้งแรก Windows อาจขึ้นว่า "Windows protected your PC" เพราะไฟล์ยังไม่ได้เซ็นดิจิทัล กด **More info → Run anyway**
+
+ถ้าจะรันจากโค้ด ต้องมี Python 3.11 ขึ้นไป:
 
 ```
 git clone https://github.com/Tachsakorn/power-meter
@@ -28,7 +32,7 @@ pip install .
 
 ## ใช้งาน
 
-ดับเบิลคลิก `run.bat` เพื่อเปิดแอป ครั้งแรกจะติดตั้งสิ่งที่ต้องใช้ให้เอง
+เปิด `PowerMeter.exe` หรือถ้ารันจากโค้ด ดับเบิลคลิก `run.bat` (ครั้งแรกจะติดตั้งสิ่งที่ต้องใช้ให้เอง)
 
 ![Power Meter](docs/screenshot.png)
 
@@ -88,6 +92,9 @@ power-meter check
 node --test tests/js/*.test.js
 ruff check . && ruff format .
 ```
+
+สร้าง `PowerMeter.exe` เอง: `pip install . pyinstaller` แล้ว `pyinstaller packaging/power-meter.spec` ไฟล์จะอยู่ใน `dist/`
+ถ้า push tag เช่น `v0.2.0` ขึ้น GitHub ระบบจะสร้าง .exe และขึ้นหน้า Releases ให้เอง
 
 ## ข้อจำกัด
 

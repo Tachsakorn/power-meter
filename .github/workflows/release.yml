@@ -1,0 +1,49 @@
+name: Release
+
+# Push a tag like v0.2.0 to build PowerMeter.exe and publish it as a release.
+# Run it by hand from the Actions tab to get the .exe without releasing.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  exe:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install . pyinstaller
+      - run: pyinstaller packaging/power-meter.spec
+
+      - name: Smoke test
+        shell: pwsh
+        run: |
+          $log = "$env:LOCALAPPDATA\power-meter\error.log"
+          $check = Start-Process dist\PowerMeter.exe -ArgumentList check -Wait -PassThru
+          if ($check.ExitCode -ne 0) { Get-Content $log; exit 1 }
+          $app = Start-Process dist\PowerMeter.exe -PassThru
+          Start-Sleep 20
+          $died = $app.HasExited
+          taskkill /im PowerMeter.exe /f /t | Out-Null
+          if (Test-Path $log) { Get-Content $log }
+          if ($died) { exit 1 }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PowerMeter
+          path: dist/PowerMeter.exe
+
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >
+          gh release create ${{ github.ref_name }} dist/PowerMeter.exe
+          --title "Power Meter ${{ github.ref_name }}"
+          --notes-file packaging/release-notes.md

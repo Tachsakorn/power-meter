@@ -5,7 +5,17 @@ from pathlib import Path
 from . import config, console
 
 
+def _attach_console() -> None:
+    """PowerMeter.exe has no console; borrow the terminal it was started from, if any."""
+    import ctypes
+
+    if ctypes.windll.kernel32.AttachConsole(-1):  # ATTACH_PARENT_PROCESS
+        sys.stdout = open("CONOUT$", "w", encoding="utf-8")  # noqa: SIM115
+
+
 def main() -> None:
+    if sys.stdout is None and sys.platform == "win32" and len(sys.argv) > 1:
+        _attach_console()
     if sys.stderr is None:
         # Started with pythonw (no console): keep crashes somewhere we can read them.
         log_dir = config.default_data_dir()
