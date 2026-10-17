@@ -13,7 +13,7 @@
 ต้องใช้ Windows และ Python 3.11 ขึ้นไป
 
 ```
-git clone https://github.com/<your-name>/power-meter
+git clone https://github.com/Tachsakorn/power-meter
 cd power-meter
 pip install .
 copy config.example.toml config.toml
@@ -23,9 +23,18 @@ copy config.example.toml config.toml
 
 ## ใช้งาน
 
+ดับเบิลคลิก `run.bat` เพื่อเปิดแอป ครั้งแรกจะติดตั้งสิ่งที่ต้องใช้ให้เอง
+
+![Power Meter](docs/screenshot.png)
+
+หน้าแอปเปลี่ยนสีตามช่วงค่าไฟ: สีแดดตอนช่วงแพง สีกลางคืนตอนช่วงถูก วงกลมคือนาฬิกา 24 ชั่วโมงที่บอกว่าช่วงไหนแพงหรือถูก และเข็มชี้เวลาตอนนี้
+
+ใช้ผ่าน command line ก็ได้:
+
 ```
-power-meter            # เริ่มวัด กด Ctrl+C เพื่อหยุด
-power-meter report     # ดูสรุป 7 วันล่าสุด
+power-meter              # เปิดแอป
+power-meter run          # วัดในหน้าต่าง console กด Ctrl+C เพื่อหยุด
+power-meter report       # ดูสรุป 7 วันล่าสุด
 power-meter report -d 30
 ```
 
@@ -69,4 +78,4 @@ ruff check . && ruff format .
 
 ## License
 
-MIT
+MIT. ฟอนต์ IBM Plex Sans Thai ใช้ SIL Open Font License (ดู `src/power_meter/web/fonts/OFL.txt`)

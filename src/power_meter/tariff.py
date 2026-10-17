@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Container
 from dataclasses import dataclass, field
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 PEAK = "peak"
 OFF_PEAK = "off_peak"
@@ -34,6 +34,17 @@ class TouTariff:
         base = self.peak_rate if period == PEAK else self.off_peak_rate
         return (base + self.ft) * (1 + self.vat)
 
+    def next_change(self, when: datetime) -> datetime:
+        """When the period after `when` switches. Boundaries fall on whole hours."""
+        current = self.period(when)
+        t = when.replace(minute=0, second=0, microsecond=0)
+        # A long holiday weekend is at most a few days; 10 days is a safe bound.
+        for _ in range(24 * 10):
+            t += timedelta(hours=1)
+            if self.period(t) != current:
+                return t
+        raise RuntimeError("tariff period never changes")
+
 
 @dataclass(frozen=True)
 class FlatTariff:
@@ -48,6 +59,9 @@ class FlatTariff:
 
     def price_per_kwh(self, period: str) -> float:
         return (self.rate + self.ft) * (1 + self.vat)
+
+    def next_change(self, when: datetime) -> None:
+        return None
 
 
 Tariff = TouTariff | FlatTariff

@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Power Meter</title>
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body data-period="off_peak">
+<main class="app">
+  <header class="top">
+    <h1>Power Meter</h1>
+    <p class="period-chip" id="periodChip"></p>
+  </header>
+
+  <section class="now" aria-label="ตอนนี้">
+    <figure class="dial" aria-hidden="true">
+      <svg viewBox="0 0 200 200" id="dial"></svg>
+      <figcaption class="dial-center">
+        <span class="dial-price" id="dialPrice">–</span>
+        <span class="dial-unit">บาท/หน่วย</span>
+      </figcaption>
+    </figure>
+
+    <div class="rate">
+      <p class="rate-value"><span id="bahtPerHour">–</span><span class="rate-unit">บาท/ชั่วโมง</span></p>
+      <p class="rate-watts">
+        <span id="watts">กำลังเริ่มวัด…</span>
+        <span class="badge" id="source" hidden></span>
+      </p>
+      <p class="rate-next" id="nextChange"></p>
+    </div>
+  </section>
+
+  <section class="totals" aria-label="ยอดรวม">
+    <div>
+      <p class="total-label">วันนี้</p>
+      <p class="total-value" id="today">–</p>
+      <p class="total-sub" id="todayKwh"></p>
+    </div>
+    <div>
+      <p class="total-label">ตั้งแต่เปิดแอป</p>
+      <p class="total-value" id="session">–</p>
+    </div>
+    <div>
+      <p class="total-label">เดือนนี้</p>
+      <p class="total-value" id="month">–</p>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>กำลังไฟ 10 นาทีล่าสุด</h2>
+    <div class="chart" id="powerChart"></div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2>7 วันล่าสุด</h2>
+      <p class="legend" id="legend">
+        <span class="key key-peak">ช่วงแพง</span>
+        <span class="key key-off">ช่วงถูก</span>
+      </p>
+    </div>
+    <div class="bars" id="dayBars"></div>
+  </section>
+
+  <footer class="sensors" id="sensors"></footer>
+</main>
+<script src="app.js"></script>
+</body>
+</html>
