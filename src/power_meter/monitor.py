@@ -88,11 +88,14 @@ class Monitor:
         with self.lock:
             self.log.save()
 
-    def month_baht(self, day: date) -> float:
+    def month_usage(self, day: date) -> tuple[Usage, int]:
+        """Usage so far in `day`'s month, and how many days of it have data."""
         prefix = day.isoformat()[:7]
-        return sum(
-            u.baht
-            for d, periods in self.log.days.items()
-            if d.startswith(prefix)
-            for u in periods.values()
-        )
+        total = Usage()
+        days = 0
+        for d, periods in self.log.days.items():
+            if d.startswith(prefix):
+                days += 1
+                for u in periods.values():
+                    total.add(u.wh, u.baht)
+        return total, days

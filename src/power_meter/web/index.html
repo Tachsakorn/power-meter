@@ -3,70 +3,88 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Power Meter</title>
+<title>มิเตอร์ไฟคอม</title>
 <link rel="stylesheet" href="fonts.css">
 <link rel="stylesheet" href="style.css">
 </head>
 <body data-period="off_peak">
 <main class="app">
   <header class="top">
-    <h1>Power Meter</h1>
-    <p class="period-chip" id="periodChip"></p>
+    <div class="brand">
+      <h1>มิเตอร์ไฟคอม</h1>
+      <p class="period" id="period" aria-live="polite"></p>
+    </div>
+    <div class="actions">
+    <button type="button" class="pill-button" id="compactToggle" aria-pressed="false">ย่อเป็นวิดเจ็ต</button>
+    <details class="info">
+      <summary>ที่มาของตัวเลข</summary>
+      <div class="info-panel">
+        <p id="sourceNote"></p>
+        <ul class="sensors" id="sensors"></ul>
+        <p class="info-tip" id="cpuTip" hidden>
+          เปิด LibreHardwareMonitor แบบ Run as administrator แล้วกด Options → Remote Web Server → Run
+          ตัวเลขไฟ CPU จะแม่นขึ้น
+        </p>
+      </div>
+    </details>
+    </div>
   </header>
 
-  <section class="now" aria-label="ตอนนี้">
-    <figure class="dial" aria-hidden="true">
-      <svg viewBox="0 0 200 200" id="dial"></svg>
-      <figcaption class="dial-center">
-        <span class="dial-price" id="dialPrice">–</span>
-        <span class="dial-unit">บาท/หน่วย</span>
-      </figcaption>
+  <section class="hero" aria-label="ตอนนี้">
+    <figure class="dial">
+      <svg viewBox="0 0 220 220" id="dial" aria-hidden="true"></svg>
+      <figcaption class="dial-center" id="dialCenter"></figcaption>
     </figure>
 
     <div class="rate">
-      <p class="rate-value"><span id="bahtPerHour">–</span><span class="rate-unit">บาท/ชั่วโมง</span></p>
-      <p class="rate-watts">
-        <span id="watts">กำลังเริ่มวัด…</span>
-        <span class="badge" id="source" hidden></span>
+      <p class="rate-value">
+        <span id="bahtPerHour">–</span>
+        <span class="rate-unit">฿/ชม.</span>
       </p>
-      <p class="rate-next" id="nextChange"></p>
+      <p class="rate-meta">
+        <span id="watts">กำลังเริ่มวัด…</span>
+        <span class="badge" id="estimate" hidden title="เสียบปลั๊กอยู่ เลยรวมค่าจากเซนเซอร์แต่ละส่วน">≈ ประมาณ</span>
+      </p>
+      <p class="rate-price" id="price"></p>
+      <p class="advice" id="advice" hidden></p>
     </div>
   </section>
 
   <section class="totals" aria-label="ยอดรวม">
-    <div>
+    <div class="total">
       <p class="total-label">วันนี้</p>
       <p class="total-value" id="today">–</p>
-      <p class="total-sub" id="todayKwh"></p>
+      <p class="total-sub" id="todaySub"></p>
     </div>
-    <div>
-      <p class="total-label">ตั้งแต่เปิดแอป</p>
-      <p class="total-value" id="session">–</p>
-    </div>
-    <div>
+    <div class="total">
       <p class="total-label">เดือนนี้</p>
       <p class="total-value" id="month">–</p>
+      <p class="total-sub" id="monthSub"></p>
+    </div>
+    <div class="total">
+      <p class="total-label">คาดทั้งเดือน</p>
+      <p class="total-value" id="projection">–</p>
+      <p class="total-sub" id="projectionSub"></p>
     </div>
   </section>
 
   <section class="panel">
-    <h2>กำลังไฟ 10 นาทีล่าสุด</h2>
+    <h2>ใช้ไฟ 10 นาทีล่าสุด</h2>
     <div class="chart" id="powerChart"></div>
   </section>
 
   <section class="panel">
     <div class="panel-head">
-      <h2>7 วันล่าสุด</h2>
+      <h2>ค่าไฟ 7 วันล่าสุด</h2>
       <p class="legend" id="legend">
         <span class="key key-peak">ช่วงแพง</span>
         <span class="key key-off">ช่วงถูก</span>
       </p>
     </div>
-    <div class="bars" id="dayBars"></div>
+    <div class="days" id="days"></div>
   </section>
-
-  <footer class="sensors" id="sensors"></footer>
 </main>
+<div class="tip" id="tip" role="tooltip" hidden></div>
 <script src="app.js"></script>
 </body>
 </html>

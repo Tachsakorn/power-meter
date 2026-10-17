@@ -1,33 +1,63 @@
+/* Registered so the theme can fade between day and night instead of snapping. */
+@property --bg {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #1c2046;
+}
+@property --surface {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #252a5a;
+}
+@property --line {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #363c74;
+}
+@property --ink {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #eef0ff;
+}
+@property --muted {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #aab0dc;
+}
+
 :root {
-  /* Off-peak: the cheap hours, so the app looks like night. */
+  --radius-lg: 18px;
+  --radius-sm: 8px;
+  font-family: "IBM Plex Sans Thai", "Leelawadee UI", Tahoma, sans-serif;
+}
+
+/* Off-peak: the cheap hours look like night. Chart hues checked with the
+   dataviz palette validator against this surface. */
+body {
   --bg: #1c2046;
   --surface: #252a5a;
   --line: #363c74;
   --ink: #eef0ff;
-  --muted: #a3a9d6;
-  --accent: #9fb8ff;
-  --peak: #ffb938;
-  --off: #7c8cff;
-  --ring-base: #2f3568;
-
-  --radius-lg: 20px;
-  --radius-sm: 10px;
-  font-family: "IBM Plex Sans Thai", "Leelawadee UI", Tahoma, sans-serif;
+  --muted: #aab0dc;
+  --accent: #a9b6ff;
+  --peak: #c78010;
+  --off: #6f7ff5;
+  --advice-bg: #2f3a8a;
   color-scheme: dark;
 }
 
+/* Peak: daytime prices, daytime colors. */
 body[data-period="peak"],
 body[data-period="flat"] {
-  /* Peak: daytime prices, daytime colors. */
   --bg: #fff1c9;
   --surface: #fffaeb;
-  --line: #f0dca6;
+  --line: #efd9a0;
   --ink: #2b2010;
-  --muted: #7a6a4a;
-  --accent: #c87800;
-  --peak: #f29e00;
-  --off: #5b67d8;
-  --ring-base: #f3e2b4;
+  --muted: #6e5d3c;
+  --accent: #b86e00;
+  --peak: #c47600;
+  --off: #4f5bd0;
+  --advice-bg: #ffe08a;
   color-scheme: light;
 }
 
@@ -48,81 +78,239 @@ body {
   line-height: 1.5;
   font-variant-numeric: tabular-nums;
   transition:
-    background-color 0.8s ease,
-    color 0.8s ease;
+    --bg 0.9s ease,
+    --surface 0.9s ease,
+    --line 0.9s ease,
+    --ink 0.9s ease,
+    --muted 0.9s ease;
   -webkit-font-smoothing: antialiased;
 }
 
 p,
 h1,
 h2,
+ul,
 figure {
   margin: 0;
 }
 
-.app {
-  max-width: 880px;
-  margin: 0 auto;
-  padding: 24px 28px 28px;
-  display: grid;
-  gap: 20px;
+:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+  border-radius: 4px;
 }
+
+.app {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 22px 28px 32px;
+  display: grid;
+  gap: 22px;
+}
+
+/* Header */
 
 .top {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  align-items: flex-start;
+  gap: 16px;
+  position: relative;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
 }
 
 h1 {
-  font-size: 17px;
-  font-weight: 600;
+  font-size: 18px;
+  font-weight: 700;
 }
 
 h2 {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--muted);
+  font-size: 15px;
+  font-weight: 600;
 }
 
-.period-chip {
+.period {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-size: 14px;
   font-weight: 500;
-  padding: 4px 12px;
+  padding: 3px 12px 3px 6px;
   border-radius: 999px;
   background: var(--surface);
   border: 1px solid var(--line);
 }
 
-.period-chip::before {
-  content: "";
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  margin-right: 8px;
-  border-radius: 50%;
-  background: var(--off);
-  vertical-align: 1px;
+.period svg {
+  width: 20px;
+  height: 20px;
 }
 
-body[data-period="peak"] .period-chip::before {
-  background: var(--peak);
+.glyph-sun {
+  fill: var(--peak);
 }
 
-/* The dial and the live rate */
+.glyph-moon {
+  fill: var(--off);
+}
 
-.now {
-  display: grid;
-  grid-template-columns: 260px 1fr;
+.actions {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.info summary,
+.pill-button {
+  cursor: pointer;
+  list-style: none;
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--muted);
+  background: none;
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+}
+
+.pill-button:hover,
+.info summary:hover {
+  color: var(--ink);
+  border-color: var(--muted);
+}
+
+/* Widget mode: just the live rate, small enough to sit in a corner. */
+
+body.compact .hero .dial,
+body.compact .totals,
+body.compact .panel,
+body.compact .info,
+body.compact .rate-price,
+body.compact .advice,
+body.compact h1 {
+  display: none;
+}
+
+body.compact .app {
+  padding: 12px 16px;
+  gap: 8px;
+}
+
+body.compact .top {
+  flex-direction: row;
   align-items: center;
-  gap: 36px;
-  padding: 8px 0;
+}
+
+body.compact .pill-button {
+  font-size: 12px;
+  padding: 2px 10px;
+}
+
+body.compact .hero {
+  display: block;
+  justify-items: start;
+  text-align: left;
+}
+
+body.compact .rate-value {
+  font-size: 52px;
+  justify-content: flex-start;
+}
+
+body.compact .rate-unit {
+  font-size: 18px;
+}
+
+body.compact .rate-meta {
+  margin-top: 6px;
+  font-size: 15px;
+  justify-content: flex-start;
+}
+
+.info summary::-webkit-details-marker {
+  display: none;
+}
+
+.info summary::before {
+  content: "i";
+  display: inline-grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  margin-right: 6px;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  font-size: 11px;
+  font-weight: 700;
+  font-style: italic;
+  vertical-align: -2px;
+}
+
+.info[open] summary {
+  color: var(--ink);
+}
+
+.info-panel {
+  position: absolute;
+  right: 0;
+  top: 40px;
+  z-index: 10;
+  width: min(340px, calc(100vw - 32px));
+  padding: 16px 18px;
+  display: grid;
+  gap: 10px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.18);
+  font-size: 14px;
+}
+
+.sensors {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.sensor {
+  display: flex;
+  justify-content: space-between;
+}
+
+.sensor span:last-child {
+  color: var(--muted);
+}
+
+.sensor.is-on span:last-child {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.info-tip {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* Hero: the dial and the live rate */
+
+.hero {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  align-items: center;
+  gap: 40px;
 }
 
 .dial {
   position: relative;
-  width: 260px;
+  width: 220px;
   aspect-ratio: 1;
 }
 
@@ -139,29 +327,40 @@ body[data-period="peak"] .period-chip::before {
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  text-align: center;
   pointer-events: none;
 }
 
-.dial-price {
-  font-size: 34px;
-  font-weight: 600;
-  line-height: 1.1;
-}
-
-.dial-unit {
+.dial-kicker {
   font-size: 13px;
   color: var(--muted);
 }
 
+.dial-big {
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.dial-big small {
+  font-size: 15px;
+  font-weight: 500;
+  margin-left: 3px;
+}
+
+.dial-at {
+  font-size: 13px;
+  font-weight: 500;
+}
+
 .ring-base {
   fill: none;
-  stroke: var(--ring-base);
+  stroke: var(--surface);
 }
 
 .ring-off {
   fill: none;
   stroke: var(--off);
-  opacity: 0.55;
 }
 
 .ring-peak {
@@ -169,19 +368,26 @@ body[data-period="peak"] .period-chip::before {
   stroke: var(--peak);
 }
 
-.tick-label {
-  font-size: 9px;
-  fill: var(--muted);
+.ring-remaining {
+  fill: none;
+  stroke: var(--ink);
+  stroke-linecap: round;
+  opacity: 0.85;
+}
+
+.ring-tick {
+  stroke: var(--ink);
+  stroke-width: 2;
+}
+
+.ring-label {
+  font-size: 11px;
+  font-weight: 600;
+  fill: var(--ink);
   font-family: inherit;
 }
 
-.hand {
-  stroke: var(--ink);
-  stroke-width: 2.5;
-  stroke-linecap: round;
-}
-
-.hand-dot {
+.now-marker {
   fill: var(--ink);
   stroke: var(--bg);
   stroke-width: 3;
@@ -191,22 +397,22 @@ body[data-period="peak"] .period-chip::before {
   display: flex;
   align-items: baseline;
   flex-wrap: wrap;
-  gap: 4px 14px;
-  font-size: clamp(56px, 9vw, 88px);
+  gap: 0 12px;
+  font-size: clamp(60px, 10vw, 96px);
   font-weight: 700;
   line-height: 1;
   letter-spacing: -0.02em;
 }
 
 .rate-unit {
-  font-size: 18px;
-  font-weight: 500;
+  font-size: 22px;
+  font-weight: 600;
   letter-spacing: 0;
   color: var(--muted);
 }
 
-.rate-watts {
-  margin-top: 14px;
+.rate-meta {
+  margin-top: 12px;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -214,23 +420,31 @@ body[data-period="peak"] .period-chip::before {
 }
 
 .badge {
-  font-size: 12px;
-  padding: 2px 8px;
+  font-size: 13px;
+  padding: 1px 8px;
   border-radius: 6px;
   border: 1px solid var(--line);
   color: var(--muted);
+  cursor: help;
 }
 
-.rate-next {
-  margin-top: 18px;
-  max-width: 40ch;
+.rate-price {
+  margin-top: 4px;
   color: var(--muted);
 }
 
-.rate-next strong {
+.rate-price strong {
   color: var(--ink);
   font-weight: 600;
-  white-space: nowrap;
+}
+
+.advice {
+  margin-top: 16px;
+  display: inline-block;
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--advice-bg);
+  font-weight: 500;
 }
 
 /* Totals */
@@ -243,22 +457,23 @@ body[data-period="peak"] .period-chip::before {
   border-radius: var(--radius-lg);
 }
 
-.totals > div {
+.total {
   padding: 16px 20px;
 }
 
-.totals > div + div {
+.total + .total {
   border-left: 1px solid var(--line);
 }
 
 .total-label {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--muted);
 }
 
 .total-value {
-  font-size: 26px;
-  font-weight: 600;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.3;
 }
 
 .total-sub {
@@ -277,6 +492,7 @@ body[data-period="peak"] .period-chip::before {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
+  gap: 12px;
 }
 
 .legend {
@@ -292,7 +508,7 @@ body[data-period="peak"] .period-chip::before {
   width: 10px;
   height: 10px;
   margin-right: 6px;
-  border-radius: 3px;
+  border-radius: 2px;
   vertical-align: -1px;
 }
 
@@ -305,8 +521,9 @@ body[data-period="peak"] .period-chip::before {
 }
 
 .chart {
-  height: 120px;
+  height: 140px;
   position: relative;
+  touch-action: none;
 }
 
 .chart svg {
@@ -318,7 +535,7 @@ body[data-period="peak"] .period-chip::before {
 
 .chart-area {
   fill: var(--accent);
-  opacity: 0.18;
+  opacity: 0.12;
 }
 
 .chart-line {
@@ -326,6 +543,13 @@ body[data-period="peak"] .period-chip::before {
   stroke: var(--accent);
   stroke-width: 2;
   stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.chart-end {
+  fill: var(--accent);
+  stroke: var(--bg);
+  stroke-width: 2;
 }
 
 .chart-grid {
@@ -333,9 +557,21 @@ body[data-period="peak"] .period-chip::before {
   stroke-width: 1;
 }
 
+.chart-cross {
+  stroke: var(--muted);
+  stroke-width: 1;
+}
+
 .chart-label {
   font-size: 11px;
   fill: var(--muted);
+  font-family: inherit;
+}
+
+.chart-value {
+  font-size: 13px;
+  font-weight: 600;
+  fill: var(--ink);
   font-family: inherit;
 }
 
@@ -349,110 +585,138 @@ body[data-period="peak"] .period-chip::before {
   border-radius: var(--radius-sm);
 }
 
-.bars {
+.days {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 10px;
-  height: 170px;
+  height: 180px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 0;
+  position: relative;
 }
 
-.bar {
-  display: grid;
-  grid-template-rows: auto 1fr auto;
+.day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
   gap: 6px;
-  text-align: center;
   min-width: 0;
+  border-radius: var(--radius-sm);
+  cursor: default;
 }
 
-.bar-baht {
+.day:hover,
+.day:focus-visible {
+  background: color-mix(in srgb, var(--surface) 70%, transparent);
+}
+
+.day-baht {
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
 }
 
-.bar-track {
+.day-stack {
+  width: 28px;
   display: flex;
   flex-direction: column-reverse;
-  justify-content: flex-start;
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-  background: var(--surface);
+  gap: 2px;
 }
 
-.bar-off {
-  background: var(--off);
+.day-stack > div {
+  min-height: 0;
 }
 
-.bar-peak {
+.day-stack > div:last-child {
+  border-radius: 4px 4px 0 0;
+}
+
+.seg-peak {
   background: var(--peak);
 }
 
-.bar-day {
-  font-size: 13px;
-  color: var(--muted);
+.seg-off {
+  background: var(--off);
 }
 
-.bar.is-today .bar-day {
+.day-labels {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: -4px;
+}
+
+.day-labels .is-today {
   color: var(--ink);
   font-weight: 600;
 }
 
-/* Sensors */
+/* Tooltip shared by both charts */
 
-.sensors {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 18px;
+.tip {
+  position: fixed;
+  z-index: 20;
+  pointer-events: none;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--ink);
+  color: var(--bg);
   font-size: 13px;
-  color: var(--muted);
-  padding-top: 4px;
+  line-height: 1.45;
+  white-space: nowrap;
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.2);
 }
 
-.sensor::before {
+.tip strong {
+  font-size: 15px;
+}
+
+.tip .row::before {
   content: "";
   display: inline-block;
-  width: 7px;
-  height: 7px;
+  width: 10px;
+  height: 3px;
   margin-right: 6px;
-  border-radius: 50%;
-  background: var(--muted);
-  opacity: 0.4;
-  vertical-align: 1px;
+  border-radius: 2px;
+  vertical-align: 3px;
+  background: var(--key);
 }
 
-.sensor.is-on::before {
-  background: #3fbf7f;
-  opacity: 1;
-}
-
-@media (max-width: 680px) {
+@media (max-width: 700px) {
   .app {
     padding: 16px;
+    gap: 18px;
   }
-  .now {
+  .top {
+    flex-direction: column;
+  }
+  .info-panel {
+    left: 0;
+    right: auto;
+  }
+  .hero {
     grid-template-columns: 1fr;
     justify-items: center;
     text-align: center;
-    gap: 20px;
+    gap: 18px;
   }
   .dial {
-    width: min(240px, 70vw);
+    width: min(220px, 64vw);
   }
   .rate-value,
-  .rate-watts {
+  .rate-meta {
     justify-content: center;
-  }
-  .rate-next {
-    margin-inline: auto;
   }
   .totals {
     grid-template-columns: 1fr;
   }
-  .totals > div + div {
+  .total + .total {
     border-left: 0;
     border-top: 1px solid var(--line);
   }
-  .bars {
-    gap: 5px;
+  .day-stack {
+    width: 20px;
   }
 }
 
