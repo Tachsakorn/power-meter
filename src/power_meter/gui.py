@@ -7,6 +7,7 @@ import threading
 from datetime import datetime, timedelta
 from pathlib import Path
 
+from . import game_store
 from .config import Config
 from .monitor import Monitor
 from .storage import Usage
@@ -38,6 +39,18 @@ class Api:
         width, height = COMPACT_SIZE if compact else FULL_SIZE
         self._window.on_top = compact
         self._window.resize(width, height)
+
+    # Build Your Reactor. The game only gets its own save file, nothing else.
+
+    def load_game(self) -> dict | None:
+        return game_store.load(self._game_path())
+
+    def save_game(self, data: dict) -> bool:
+        game_store.save(self._game_path(), data)
+        return True
+
+    def _game_path(self) -> Path:
+        return self._monitor.cfg.data_file.with_name("reactor-save.json")
 
 
 def build_state(monitor: Monitor, now: datetime) -> dict:

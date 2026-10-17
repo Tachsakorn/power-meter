@@ -1,0 +1,885 @@
+/* Build Your Reactor. Everything here is scoped to the game tab (.rx) or to
+   the tab switcher, so the meter's own styles are untouched. */
+
+/* Tab switcher in the shared header, styled with the meter's tokens */
+
+.views {
+  display: inline-flex;
+  padding: 3px;
+  gap: 2px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.views button {
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.4;
+  padding: 4px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.views button[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--bg);
+  font-weight: 600;
+}
+
+.views small {
+  font-size: 11px;
+  margin-left: 4px;
+  opacity: 0.8;
+}
+
+body[data-view="reactor"] .hero,
+body[data-view="reactor"] .totals,
+body[data-view="reactor"] .panel {
+  display: none;
+}
+
+body.compact .views,
+body.compact .rx {
+  display: none;
+}
+
+/* The game: a 1970s plant control room. Enamel panels, engraved label
+   plates, nixie counters, an analog gauge, and the blue glow of a reactor pool. */
+
+.rx {
+  --rx-enamel: #8fa89a;
+  --rx-enamel-hi: #a9bdb0;
+  --rx-enamel-lo: #6c8778;
+  --rx-bay: #c9d4c9;
+  --rx-bay-art: #e4e6da;
+  --rx-bakelite: #26221f;
+  --rx-engrave: #ece3cc;
+  --rx-ink: #1d1a17;
+  --rx-brass: #b48c55;
+  --rx-amber: #ffad33;
+  --rx-red: #c9412f;
+  --rx-steel: #8d8f88;
+  --rx-concrete: #b7b2a3;
+  --rx-water: #12364a;
+  --rx-cherenkov: #5cc4ff;
+  --rx-hazard: #e9b52a;
+  display: grid;
+  gap: 18px;
+  color: var(--rx-ink);
+  position: relative;
+}
+
+.rx[hidden] {
+  display: none;
+}
+
+.rx h3,
+.rx h4,
+.rx p,
+.rx ul {
+  margin: 0;
+}
+
+.rx-realcost {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.rx-realcost strong {
+  font-size: 17px;
+}
+
+.rx-realcost span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* Riveted enamel panel */
+
+.rx-console,
+.rx-floor-wrap,
+.rx-lower > section,
+.rx-dialog {
+  background: radial-gradient(circle at 12px 12px, var(--rx-enamel-lo) 2.5px, transparent 3px),
+    radial-gradient(circle at calc(100% - 12px) 12px, var(--rx-enamel-lo) 2.5px, transparent 3px),
+    radial-gradient(circle at 12px calc(100% - 12px), var(--rx-enamel-lo) 2.5px, transparent 3px),
+    radial-gradient(
+      circle at calc(100% - 12px) calc(100% - 12px),
+      var(--rx-enamel-lo) 2.5px,
+      transparent 3px
+    ),
+    var(--rx-enamel);
+  border: 2px solid var(--rx-enamel-lo);
+  border-radius: 6px;
+  box-shadow:
+    inset 0 1px 0 var(--rx-enamel-hi),
+    inset 0 -3px 0 rgb(0 0 0 / 0.12);
+  padding: 18px 22px 20px;
+}
+
+.rx-console-head,
+.rx-section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-bottom: 14px;
+}
+
+.rx-console-head h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.rx h3 {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+/* Engraved plastic label plates */
+
+.rx-plate {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 2px;
+  background: var(--rx-bakelite);
+  color: var(--rx-engrave);
+  font-size: 12px;
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.08);
+}
+
+.rx-plate b {
+  font-weight: 700;
+}
+
+.rx-readouts {
+  display: grid;
+  grid-template-columns: 1.3fr 1.2fr 0.8fr 0.8fr;
+  gap: 14px;
+  align-items: end;
+}
+
+.rx-readout {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+}
+
+/* Nixie counter */
+
+.rx-nixie {
+  display: flex;
+  gap: 4px;
+  padding: 8px 10px;
+  min-height: 66px;
+  align-items: center;
+  border-radius: 4px;
+  background: repeating-linear-gradient(45deg, rgb(255 255 255 / 0.03) 0 2px, transparent 2px 4px),
+    var(--rx-bakelite);
+}
+
+.rx-tube {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 48px;
+  border-radius: 14px 14px 6px 6px;
+  background: linear-gradient(#3a2f28, #1a1512);
+  color: #ffb35c;
+  font-size: 30px;
+  font-weight: 600;
+  text-shadow:
+    0 0 4px #ff7b1a,
+    0 0 12px rgb(255 110 20 / 0.6);
+}
+
+.rx-counter {
+  min-width: 90px;
+  padding: 10px 12px;
+  border-radius: 4px;
+  background: var(--rx-bakelite);
+  color: #9ef0b8;
+  font-size: 24px;
+  font-weight: 600;
+  text-align: center;
+  text-shadow: 0 0 8px rgb(110 240 160 / 0.5);
+}
+
+/* Gauge */
+
+.rx-gauge {
+  width: 170px;
+  height: 98px;
+  background: var(--rx-bay-art);
+  border: 2px solid var(--rx-bakelite);
+  border-radius: 90px 90px 6px 6px;
+}
+
+.rx-gauge-arc {
+  fill: none;
+  stroke: var(--rx-ink);
+  stroke-width: 1.5;
+}
+
+.rx-gauge-tick {
+  stroke: var(--rx-ink);
+  stroke-width: 1.5;
+}
+
+.rx-gauge-label {
+  font-size: 9px;
+  fill: var(--rx-ink);
+  font-family: inherit;
+}
+
+.rx-needle {
+  stroke: var(--rx-red);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  transition: transform 0.6s cubic-bezier(0.3, 1.4, 0.5, 1);
+}
+
+/* Hand crank */
+
+.rx-crank {
+  position: relative;
+  width: 84px;
+  height: 84px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.rx-crank svg {
+  width: 100%;
+  height: 100%;
+}
+
+.rx-crank-plate {
+  fill: var(--rx-brass);
+  stroke: var(--rx-ink);
+  stroke-width: 2;
+}
+
+.rx-crank-arm {
+  transform-origin: 40px 40px;
+  transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.rx-crank-bar {
+  stroke: var(--rx-ink);
+  stroke-width: 6;
+  stroke-linecap: round;
+}
+
+.rx-crank-knob {
+  fill: var(--rx-red);
+  stroke: var(--rx-ink);
+  stroke-width: 2;
+}
+
+.rx-crank:active svg {
+  transform: scale(0.96);
+}
+
+.rx-pop {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  font-weight: 700;
+  color: var(--rx-bakelite);
+  pointer-events: none;
+  animation: rx-pop 0.8s ease-out forwards;
+}
+
+/* Plant floor */
+
+.rx-goal {
+  font-size: 14px;
+}
+
+.rx-floor {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 12px;
+}
+
+.rx-bay {
+  min-height: 236px;
+  border-radius: 4px;
+  font: inherit;
+  color: var(--rx-ink);
+}
+
+.rx-bay-empty,
+.rx-bay-expand {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 8px;
+  text-align: center;
+  font-size: 14px;
+  background:
+    repeating-linear-gradient(-45deg, var(--rx-hazard) 0 10px, var(--rx-bakelite) 10px 20px) top /
+      100% 8px no-repeat,
+    rgb(0 0 0 / 0.06);
+  border: 2px dashed var(--rx-enamel-lo);
+}
+
+.rx-bay-empty {
+  cursor: pointer;
+}
+
+.rx-bay-empty:hover {
+  background-color: rgb(0 0 0 / 0.1);
+}
+
+.rx-bay-built {
+  display: grid;
+  grid-template-rows: auto 1fr auto auto;
+  background: var(--rx-bay);
+  border: 2px solid var(--rx-enamel-lo);
+  overflow: hidden;
+}
+
+.rx-bay-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: var(--rx-bakelite);
+  color: var(--rx-engrave);
+}
+
+.rx-bay-head h4 {
+  font-size: 14px;
+  font-weight: 600;
+  flex: 1;
+}
+
+.rx-bay-no {
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+.rx-lamp-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #7bd389;
+  box-shadow: 0 0 6px #7bd389;
+}
+
+.rx-art {
+  background: var(--rx-bay-art);
+  border-bottom: 1px solid var(--rx-enamel-lo);
+  display: grid;
+  place-items: center;
+  padding: 6px;
+}
+
+.rx-art svg {
+  width: 100%;
+  max-width: 160px;
+  height: auto;
+  overflow: visible;
+}
+
+.rx-art-small {
+  width: 84px;
+  border: 1px solid var(--rx-enamel-lo);
+  border-radius: 3px;
+}
+
+.rx-bay-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+  padding: 8px 10px 4px;
+  font-size: 13px;
+}
+
+.rx-level {
+  font-weight: 700;
+}
+
+.rx-bay-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px 10px;
+}
+
+/* Push buttons */
+
+.rx-switch {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 3px;
+  background: var(--rx-bakelite);
+  color: var(--rx-engrave);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.15),
+    0 2px 0 #000;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.rx-switch:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.15);
+}
+
+.rx-switch:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.rx-text-button {
+  font: inherit;
+  font-size: 13px;
+  padding: 2px 4px;
+  border: 0;
+  background: none;
+  color: var(--rx-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.rx-scrap {
+  opacity: 0.7;
+}
+
+.rx-switch:focus-visible,
+.rx-text-button:focus-visible,
+.rx-bay-empty:focus-visible,
+.rx-crank:focus-visible {
+  outline: 3px solid var(--rx-amber);
+  outline-offset: 2px;
+}
+
+/* Research and achievements */
+
+.rx-lower {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  align-items: start;
+}
+
+.rx-lower h3 {
+  margin-bottom: 10px;
+}
+
+.rx-list {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.rx-tech,
+.rx-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--rx-bay);
+  border: 1px solid var(--rx-enamel-lo);
+  border-radius: 3px;
+}
+
+.rx-tech > div,
+.rx-option > div:not(.rx-art) {
+  flex: 1;
+  min-width: 0;
+}
+
+.rx-tech p,
+.rx-option p {
+  font-size: 13px;
+}
+
+.rx-tech.is-owned {
+  background: transparent;
+  border-style: dashed;
+}
+
+.rx-fine {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.rx-locked {
+  max-width: 130px;
+  text-align: right;
+}
+
+.rx-ach {
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  margin-bottom: 10px;
+}
+
+.rx-badge {
+  padding: 8px 10px;
+  border-radius: 3px;
+  border: 1px dashed var(--rx-enamel-lo);
+  opacity: 0.55;
+}
+
+.rx-badge p {
+  font-size: 12px;
+}
+
+.rx-badge.is-earned {
+  opacity: 1;
+  background: var(--rx-bay);
+  border: 2px solid var(--rx-brass);
+}
+
+/* Dialogs and toasts */
+
+.rx-dialog {
+  max-width: min(560px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  color: var(--rx-ink);
+}
+
+.rx-dialog::backdrop {
+  background: rgb(20 18 16 / 0.55);
+}
+
+.rx-dialog header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.rx-dialog form > p {
+  margin-bottom: 10px;
+}
+
+.rx-toasts {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  display: grid;
+  gap: 8px;
+  z-index: 30;
+}
+
+.rx-toast {
+  padding: 8px 14px;
+  border-radius: 3px;
+  background: var(--rx-bakelite);
+  color: var(--rx-engrave);
+  border-left: 4px solid var(--rx-brass);
+  font-size: 14px;
+}
+
+/* Drawings */
+
+.rx-steel {
+  fill: var(--rx-steel);
+}
+.rx-enamel {
+  fill: var(--rx-enamel);
+  stroke: var(--rx-ink);
+  stroke-width: 2;
+}
+.rx-housing {
+  fill: #5d6b63;
+  stroke: var(--rx-ink);
+  stroke-width: 2;
+}
+.rx-line,
+.rx-outline,
+.rx-glass {
+  fill: none;
+  stroke: var(--rx-ink);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+.rx-glass {
+  fill: rgb(255 255 255 / 0.35);
+}
+.rx-line-thin {
+  stroke: var(--rx-ink);
+  stroke-width: 1;
+  opacity: 0.5;
+}
+.rx-line-thin-light {
+  stroke: #cfe3f2;
+  stroke-width: 1;
+}
+.rx-blade {
+  stroke: var(--rx-engrave);
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+.rx-blade-fill {
+  fill: #f2efe6;
+  stroke: var(--rx-ink);
+  stroke-width: 1.5;
+}
+.rx-ink-fill {
+  fill: var(--rx-ink);
+}
+.rx-lamp {
+  fill: #7bd389;
+  stroke: var(--rx-ink);
+  stroke-width: 1.5;
+}
+.rx-cell-blue {
+  fill: #2c4f7c;
+}
+.rx-glint {
+  fill: rgb(255 255 255 / 0.55);
+}
+.rx-liquid {
+  fill: #7bd389;
+}
+.rx-bubble {
+  fill: #e4f7e8;
+}
+.rx-charge {
+  fill: #7bd389;
+}
+.rx-dome {
+  fill: #d8d4c6;
+}
+.rx-concrete {
+  fill: var(--rx-concrete);
+}
+.rx-water {
+  fill: var(--rx-water);
+}
+.rx-cherenkov {
+  fill: var(--rx-cherenkov);
+  opacity: 0.5;
+}
+.rx-rod {
+  stroke: #d7d2c2;
+  stroke-width: 3;
+}
+.rx-hole {
+  fill: var(--rx-bay-art);
+  stroke: var(--rx-ink);
+  stroke-width: 2;
+}
+.rx-plasma {
+  fill: none;
+  stroke: #ffb0d6;
+  stroke-width: 4;
+  stroke-dasharray: 14 9;
+  stroke-linecap: round;
+}
+.rx-coil {
+  stroke: var(--rx-brass);
+  stroke-width: 5;
+}
+
+/* Motion. Each machine runs faster as it levels up (--speed). Everything
+   stops when the tab isn't showing, so the game doesn't burn power itself. */
+
+.rx-spin,
+.rx-spin-slow,
+.rx-crank-arm {
+  transform-box: view-box;
+}
+
+.rx-spin {
+  animation: rx-rotate calc(1.6s / var(--speed, 1)) linear infinite;
+}
+
+.rx-spin-slow {
+  animation: rx-rotate calc(5s / var(--speed, 1)) linear infinite;
+}
+
+.rx-glint {
+  animation: rx-glint 4s ease-in-out infinite;
+}
+
+.rx-bubble {
+  animation: rx-bubble calc(2.4s / var(--speed, 1)) ease-in infinite;
+}
+
+.rx-bubble-2 {
+  animation-delay: 0.8s;
+}
+
+.rx-bubble-3 {
+  animation-delay: 1.5s;
+}
+
+.rx-charge {
+  animation: rx-charge 2.4s steps(1) infinite;
+}
+
+.rx-charge-2 {
+  animation-delay: 0.6s;
+}
+
+.rx-charge-3 {
+  animation-delay: 1.2s;
+}
+
+.rx-charge-4 {
+  animation-delay: 1.8s;
+}
+
+.rx-cherenkov {
+  animation: rx-glow calc(2.8s / var(--speed, 1)) ease-in-out infinite;
+}
+
+.rx-plasma {
+  animation: rx-plasma calc(0.9s / var(--speed, 1)) linear infinite;
+}
+
+.rx-bay.is-new {
+  animation: rx-drop 0.3s ease-out;
+}
+
+.rx-bay.is-upgraded .rx-lamp-dot {
+  animation: rx-flash 0.6s ease-out 2;
+}
+
+.rx-bay.is-upgraded .rx-level {
+  animation: rx-flash-text 0.8s ease-out;
+}
+
+.rx:not(.is-running) *,
+.rx:not(.is-running) *::before {
+  animation-play-state: paused !important;
+}
+
+@keyframes rx-rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes rx-glint {
+  0%,
+  60% {
+    transform: translateX(0);
+    opacity: 0;
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(52px);
+    opacity: 0;
+  }
+}
+
+@keyframes rx-bubble {
+  0% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-34px);
+    opacity: 0;
+  }
+}
+
+@keyframes rx-charge {
+  0% {
+    opacity: 1;
+  }
+  75% {
+    opacity: 0.25;
+  }
+}
+
+@keyframes rx-glow {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+@keyframes rx-plasma {
+  to {
+    stroke-dashoffset: -23;
+  }
+}
+
+@keyframes rx-pop {
+  to {
+    transform: translate(-50%, -36px);
+    opacity: 0;
+  }
+}
+
+@keyframes rx-drop {
+  from {
+    transform: translateY(-8px);
+    opacity: 0.4;
+  }
+}
+
+@keyframes rx-flash {
+  50% {
+    background: var(--rx-amber);
+    box-shadow: 0 0 14px var(--rx-amber);
+  }
+}
+
+@keyframes rx-flash-text {
+  30% {
+    color: var(--rx-red);
+  }
+}
+
+@media (max-width: 760px) {
+  .rx-floor {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+  .rx-readouts {
+    grid-template-columns: 1fr 1fr;
+  }
+  .rx-lower {
+    grid-template-columns: 1fr;
+  }
+  .rx-tube {
+    width: 24px;
+    height: 40px;
+    font-size: 24px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rx *,
+  .rx-crank-arm {
+    animation: none !important;
+    transition: none !important;
+  }
+}

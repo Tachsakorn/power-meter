@@ -6,6 +6,7 @@
 <title>มิเตอร์ไฟคอม</title>
 <link rel="stylesheet" href="fonts.css">
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="reactor/reactor.css">
 </head>
 <body data-period="off_peak">
 <main class="app">
@@ -14,6 +15,10 @@
       <h1>มิเตอร์ไฟคอม</h1>
       <p class="period" id="period" aria-live="polite"></p>
     </div>
+    <nav class="views" aria-label="เลือกหน้า">
+      <button type="button" data-view="meter" aria-pressed="true">มิเตอร์</button>
+      <button type="button" data-view="reactor" aria-pressed="false">Build Your Reactor<small>เกม</small></button>
+    </nav>
     <div class="actions">
     <button type="button" class="pill-button" id="compactToggle" aria-pressed="false">ย่อเป็นวิดเจ็ต</button>
     <details class="info">
@@ -83,8 +88,13 @@
     </div>
     <div class="days" id="days"></div>
   </section>
+
+  <section class="rx" id="reactorView" aria-label="เกม Build Your Reactor" hidden></section>
 </main>
 <div class="tip" id="tip" role="tooltip" hidden></div>
 <script src="app.js"></script>
+<script src="reactor/engine.js"></script>
+<script src="reactor/art.js"></script>
+<script src="reactor/reactor.js"></script>
 </body>
 </html>
